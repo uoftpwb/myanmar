@@ -26,13 +26,12 @@ gallupRaw <- rio::import("The_Gallup_022125.dat")
 
 # Create a character vector of the names of the variables we're interested in
 varRequired <- c(
-  "MODE", "WP16", "WP18", "WP63", "WP67", "WP69", "WP70", "WP71", "WP74",
-  "WGT", "WP4", "WPID", "YEAR_CALENDAR", "YEAR_WAVE", "REGION_MMR", "WP111",
-  "WP1325", "WP134", "WP10251", "WP103", "WP40", "WP43", "WP98", "WP13125",
-  "WP139", "WP144", "WP150", "WP112", "WP137", "WP138", "WP145", "WP146",
-  "WP108", "WP109", "WP110", "WP1233RECORDED", "WP119", "WP1233", "WP1219",
-  "WP1220", "WP1223", "WP3117", "HHSIZE", "INCOME_1", "INCOME_2", "INCOME_3",
-  "INCOME_4", "INCOME_5", "WP14", "EMP_2010"
+  "EMP_2010", "HHSIZE", "INCOME_1", "INCOME_2", "INCOME_3", "INCOME_4", "INCOME_5",
+  "MODE", "REGION_MMR", "WGT", "WP10251", "WP103", "WP108", "WP109", "WP110", "WP111", "WP112",
+  "WP119", "WP1219", "WP1220", "WP1223", "WP1233", "WP13125",
+  "WP1325", "WP134", "WP137", "WP138", "WP139", "WP14", "WP144", "WP145", "WP146",
+  "WP150", "WP16", "WP18", "WP3117", "WP4", "WP40", "WP43", "WP63", "WP67", "WP69",
+  "WP70", "WP71", "WP74", "WP98", "WPID", "YEAR_CALENDAR", "YEAR_WAVE"
 )
 
 # Subset gallupRaw to include only the variables specified in varRequired
@@ -54,8 +53,9 @@ Once we had the subset of the Gallup data, we imported the data and loaded the n
 library(dplyr)
 
 # Read the RDS file
-gallupSubset <- readRDS("(250618)GWP_RawSubset_MyanmarProject.rds")
+gallupSubset <- readRDS("data/(250618)GWP_RawSubset_MyanmarProject.rds")
 ```
+
 
 ### 1.2 Create `YEAR_INTERVIEW` 
 
@@ -75,37 +75,95 @@ gallup <- gallupSubset %>%
 Gallup coded some responses as 'Don't Know' or 'Refused', which would not be meaningful for our analysis. We converted these responses to NA using the values found in the [WORLD POLL REFERENCE TOOL](https://wpr.gallup.com/).
 
 ```{r converting-responses-to-NA}
+
 # Convert certain values to NA
 gallup <- gallup %>%
-  mutate(WP16 = ifelse(WP16 %in% c(98, 99), NA, WP16),
+  mutate(
+         WP10251 = ifelse(WP10251 %in% c(3, 4), NA, WP10251),
+         WP103 = ifelse(WP103 %in% c(3, 4), NA, WP103),
+         WP108 = ifelse(WP108 %in% c(3, 4), NA, WP108),
+         WP109 = ifelse(WP109 %in% c(3, 4), NA, WP109),
+         WP110 = ifelse(WP110 %in% c(3, 4), NA, WP110),
+         WP111 = ifelse(WP111 %in% c(3, 4), NA, WP111),
+         WP112 = ifelse(WP112 %in% c(3, 4), NA, WP112),
+         WP119 = ifelse(WP119 %in% c(3, 4), NA, WP119),
+         WP1220 = ifelse(WP1220 %in% c(100), NA, WP1220),
+         WP1223 = ifelse(WP1223 %in% c(6, 7), NA, WP1223),
+         WP1233 = ifelse(WP1233 %in% c(98, 99, 97), NA, WP1233),
+         WP13125 = ifelse(WP13125 %in% c(3, 4), NA, WP13125),
+         WP1325 = ifelse(WP1325 %in% c(3, 4), NA, WP1325),
+         WP134 = ifelse(WP134 %in% c(3, 4), NA, WP134),
+         WP137 = ifelse(WP137 %in% c(3, 4), NA, WP137),
+         WP138 = ifelse(WP138 %in% c(3, 4), NA, WP138),
+         WP139 = ifelse(WP139 %in% c(3, 4), NA, WP139),
+         WP14 = ifelse(WP14 %in% c(4, 5), NA, WP14),
+         WP144 = ifelse(WP144 %in% c(3, 4), NA, WP144),
+         WP145 = ifelse(WP145 %in% c(3, 4), NA, WP145),
+         WP146 = ifelse(WP146 %in% c(3, 4), NA, WP146),
+         WP150 = ifelse(WP150 %in% c(3, 4), NA, WP150),
+         WP16 = ifelse(WP16 %in% c(98, 99), NA, WP16),
          WP18 = ifelse(WP18 %in% c(98, 99), NA, WP18),
          WP3117 = ifelse(WP3117 %in% c(4, 5), NA, WP3117),
-         WP1233 = ifelse(WP1233 %in% c(98, 99, 97), NA, WP1233),
-         WP119 = ifelse(WP119 %in% c(3, 4), NA, WP119),
-         WP14 = ifelse(WP14 %in% c(4, 5), NA, WP14),
-         WP151 = ifelse(WP151 %in% c(3, 4), NA, WP151),
-         WP150 = ifelse(WP150 %in% c(3, 4), NA, WP150),
-         WP1220 = ifelse(WP1220 %in% c(100), NA, WP1220),
-         WP1223 = ifelse(WP1223 %in% c(6, 7), NA, WP1223))
-```
+
+         WP40 = ifelse(WP40 %in% c(3, 4), NA, WP40),
+         WP43 = ifelse(WP43 %in% c(3, 4), NA, WP43),
+         WP63 = ifelse(WP63 %in% c(3, 4), NA, WP63),
+         WP67 = ifelse(WP67 %in% c(3, 4), NA, WP67),
+         WP69 = ifelse(WP69 %in% c(98, 99), NA, WP69),
+         WP70 = ifelse(WP70 %in% c(98, 99), NA, WP70),
+         WP71 = ifelse(WP71 %in% c(98, 99), NA, WP71),
+         WP74 = ifelse(WP74 %in% c(3, 4), NA, WP74),
+         WP98 = ifelse(WP98 %in% c(3, 4), NA, WP98))
+
 
 ### 1.4 Convert Binary Response Variables
 
-For questions that have binary responses, such as 'WP119' which asks "Is religion an important part of your daily life?", the responses were initially coded as 1 for 'Yes' and 2 for 'No'. However, for regression analysis, it is more common and interpretable to code binary variables as 0 and 1. Therefore, we converted the responses for binary questions from 1 and 2 to 1 and 0, respectively.
+For questions that have binary responses, such as 'WP119' which asks "Is religion an important part of your daily life?", the responses were initially coded as 1 for 'Yes' and 2 for 'No'. However, for regression analysis, it is more common and interpretable to code binary variables as 0 and 1. Therefore, we converted the responses for binary questions from 1 and 2 to 0 and 1, respectively.
 
 ```{r converting-binaryQ}
 # Convert "2" to "0"
 gallup <- gallup %>%
-  mutate(WP1219 = ifelse(WP1219 == 2, 0, WP1219),
-         WP119 = ifelse(WP119 == 2, 0, WP119),
-         WP151 = ifelse(WP151 == 2, 0, WP151),
-         WP150 = ifelse(WP150 == 2, 0, WP150))
+  mutate(
+    WP10251 = ifelse(WP10251 == 2, 0, WP10251),
+    WP103 = ifelse(WP103 == 2, 0, WP103),
+    WP108 = ifelse(WP108 == 2, 0, WP108),
+    WP109 = ifelse(WP109 == 2, 0, WP109),
+    WP110 = ifelse(WP110 == 2, 0, WP110),
+    WP111 = ifelse(WP111 == 2, 0, WP111),
+    WP112 = ifelse(WP112 == 2, 0, WP112),
+    WP119 = ifelse(WP119 == 2, 0, WP119),
+    WP137 = ifelse(WP137 == 2, 0, WP137),
+    WP138 = ifelse(WP138 == 2, 0, WP138),
+    WP139 = ifelse(WP139 == 2, 0, WP139),
+    WP144 = ifelse(WP144 == 2, 0, WP144),
+    WP145 = ifelse(WP145 == 2, 0, WP145),
+    WP146 = ifelse(WP146 == 2, 0, WP146),
+    WP150 = ifelse(WP150 == 2, 0, WP150),
+    WP40 = ifelse(WP40 == 2, 0, WP40),
+    WP43 = ifelse(WP43 == 2, 0, WP43),
+    WP63 = ifelse(WP63 == 2, 0, WP63),
+    WP67 = ifelse(WP67 == 2, 0, WP67),
+    WP69 = ifelse(WP69 == 2, 0, WP69),
+    WP70 = ifelse(WP70 == 2, 0, WP70),
+    WP71 = ifelse(WP71 == 2, 0, WP71),
+    WP74 = ifelse(WP74 == 2, 0, WP74),
+
+    WP103 = ifelse(WP103 == 2, 0, WP103),
+    WP13125 = ifelse(WP13125 == 2, 0, WP13125),
+    WP1325 = ifelse(WP1325 == 2, 0, WP1325),
+    WP98 = ifelse(WP98 == 2, 0, WP98),
+    WP1219 = ifelse(WP1219 == 2, 0, WP1219),
+    WP134 = ifelse(WP134 == 2, 0, WP134)
+  )
 ```
+
 
 The object `gallup` is now a cleaned subset of the Gallup data.
 
 We save the Gallup cleaned data to a .rds file for later use
 
 ```{r exporting-gallup-cleaned}
-saveRDS(gallup, "(240307)GWP_cleaned_AfghanistanProject.rds")
+saveRDS(gallup, "data/(250701)GWP_cleaned_MyanmarProject.rds")
 ```
+
+
