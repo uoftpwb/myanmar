@@ -6,11 +6,11 @@ date: '2025-06-18'
 
 # Libraries --------------------------------------------------------------------
 # List of required packages
-packages <- c("data.table",  "Hmisc", "jtools", "sf", 
+package_list <- c("data.table",  "Hmisc", "jtools", "sf", 
               "ggplot2", "ggpubr", "ggrepel", "patchwork", "lubridate", "tidyverse", "EValue")
 
 # Check if packages are installed, install if needed, then load
-for (pkg in packages) {
+for (pkg in packages_list) {
   if (!requireNamespace(pkg, quietly = TRUE)) {
     install.packages(pkg)
   }
@@ -39,7 +39,6 @@ calculate_ci <- function(x, weights, conf.level = 0.95) {
 
 ## Load data ------------------------------------------------------------------
 gallup_world_raw <- readRDS("data/(250701)GWP_cleaned_MyanmarProject.rds")
-
 
 dim(gallup_world_raw)
 objects(gallup_world_raw)
@@ -135,7 +134,6 @@ gallup_world <- gallup_world_raw %>%
   mutate(WP98=factor(WP98, levels=c("Dissatisfied", "Satisfied"))) 
 
 
-
 #Extracting Myanmar data---------
 objects(gallup_world)
 
@@ -144,8 +142,10 @@ gallup_myanmar <- gallup_world %>%
 
 gallup_myanmar %>% group_by(YEAR_INTERVIEW) %>% summarise(sum(WGT, na.rm = TRUE))
 
+saveRDS(gallup_myanmar, "data/GWP_myanmar_2014_2024.rds")
 
 #Creating the summary table for WP16 and WP18
+# Analysis ---------------------------------------------------------------------
 
 SWB_myanmar <- gallup_myanmar %>% group_by(YEAR_INTERVIEW) %>% 
     summarise(
@@ -180,15 +180,141 @@ print(SWB_myanmar_long, n = 100)
 
 #Plotting the data
 
-SWB_myanmar_long %>%
-  ggplot(aes(x = mid_date, y = mean, ymin = lowci, ymax = upci, color = variable)) +
-  geom_pointrange() +
-  geom_line() +
-  geom_ribbon(alpha = 0.2) +
-  theme_minimal() +
-  labs(x = "Year", y = "Mean", title = "Myanmar SWB")
+myanmar_SWB_plot <-  SWB_myanmar_long %>%
+  ggplot(aes(x = mid_date, y = mean, ymin = lowci, ymax = upci, color = variable, group = variable)) +
+   
+  geom_vline(xintercept = as.Date("2015-11-08"), linetype = "dotted", color = "black") +
+  annotate("text", x = as.Date("2016-01-08"), y = 9.2, label = "Myanmar General Elections on November 8th, 2015\nThe National League for Democracy won a supermajority.", vjust = -0.5, hjust = 0, size = 4, fontface = "bold") +
+ 
+  geom_vline(xintercept = as.Date("2021-02-01"), linetype = "dotted", color = "black") +
+  annotate("text", x = as.Date("2021-04-01"), y = 9.2, label = "The military launched the coup d'état\non February 1st, 2021", vjust = -0.5, hjust = 0, size = 4, fontface = "bold") +
+ 
+  geom_point(size = 2) +
+  geom_line(size = 1) +
+  geom_ribbon(alpha = 0.2, aes(fill = variable), size=0) +
+  scale_color_manual(values = c("#e76f51", "#2a9d8f"), labels = c("Life Satisfaction", "Hope"), name = "Subjective Well-being") +
+  scale_fill_manual(values = c("#e76f51", "#2a9d8f"), labels = c("Life Satisfaction", "Hope"), name = "Subjective Well-being") +
+  scale_x_date(date_breaks = "1 year", date_labels = "%Y", limits = as.Date(c("2014-01-01", "2024-12-31")), expand = c(0, 0)) +
+  scale_y_continuous(limits = c(0, 10), expand = c(0, 0), breaks = seq(0, 10, 1)) +
+  theme_classic() +
+  theme_classic(base_size = 14) +
+  theme(
+    axis.ticks.x = element_line(color = 'black'),
+    axis.text.x = element_text(hjust = 0.5, color = 'black', size = 14), 
+    axis.text.y = element_text(hjust = 0.5, color = 'black', size = 14), 
+    axis.text.x.top = element_text(size = 14, face = 'bold'), 
+    plot.margin = unit(c(0.5, 1.2, -1, 0.3), 'lines'), 
+    panel.grid.major = element_blank(), 
+    panel.grid.minor = element_blank(),
+    legend.position = c(0.9, 0.1), 
+    axis.title = element_text(size = 14, face = 'bold'), 
+    legend.text = element_text(size = 14), 
+    legend.title = element_text(size = 14, face = 'bold'), 
+    plot.title = element_text(size = 14, face = 'bold', hjust = 0.5)
+  ) +
+  labs(x = "Year", y = "Mean Well-being Score (0-10)", title = "Mean Life Satisfaction and Hope in Myanmar, 2014-2024\n")
+
+ggsave("figures/myanmar_SWB_plot.png", myanmar_SWB_plot, width = 12, height = 8)
 
 
-# Analysis ---------------------------------------------------------------------
+# Affective well-being ---------------------------------------------------------
+Affective_myanmar <- gallup_myanmar %>% group_by(YEAR_INTERVIEW) %>% 
+    summarise(
+        mid_date = mean(WP4, na.rm = TRUE),
+        smile_mean = stats::weighted.mean(WP63, WGT, na.rm = TRUE), #Happiness
+        smile_se = sqrt(Hmisc::wtd.var(WP63, WGT, na.rm = TRUE) / sum(WGT, na.rm = TRUE)),
 
-Trend of life satisfaction and hope
+        enjoy_mean = stats::weighted.mean(WP67, WGT, na.rm = TRUE), #Joy
+        enjoy_se = sqrt(Hmisc::wtd.var(WP67, WGT, na.rm = TRUE) / sum(WGT, na.rm = TRUE)),
+        
+        worry_mean = stats::weighted.mean(WP69, WGT, na.rm = TRUE), #Worry
+        worry_se = sqrt(Hmisc::wtd.var(WP69, WGT, na.rm = TRUE) / sum(WGT, na.rm = TRUE)),
+        
+        sad_mean = stats::weighted.mean(WP70, WGT, na.rm = TRUE), #Sadness
+        sad_se = sqrt(Hmisc::wtd.var(WP70, WGT, na.rm = TRUE) / sum(WGT, na.rm = TRUE)),
+        
+        stress_mean = stats::weighted.mean(WP71, WGT, na.rm = TRUE), #Stress
+        stress_se = sqrt(Hmisc::wtd.var(WP71, WGT, na.rm = TRUE) / sum(WGT, na.rm = TRUE)),
+        
+        anger_mean = stats::weighted.mean(WP74, WGT, na.rm = TRUE), #Anger
+        anger_se = sqrt(Hmisc::wtd.var(WP74, WGT, na.rm = TRUE) / sum(WGT, na.rm = TRUE))
+        ) %>%
+    mutate(smile_lowci = smile_mean - 1.96 * smile_se,
+           smile_upci = smile_mean + 1.96 * smile_se,
+           enjoy_lowci = enjoy_mean - 1.96 * enjoy_se,
+           enjoy_upci = enjoy_mean + 1.96 * enjoy_se,
+           worry_lowci = worry_mean - 1.96 * worry_se,
+           worry_upci = worry_mean + 1.96 * worry_se,
+           sad_lowci = sad_mean - 1.96 * sad_se,
+           sad_upci = sad_mean + 1.96 * sad_se,
+           stress_lowci = stress_mean - 1.96 * stress_se,
+           stress_upci = stress_mean + 1.96 * stress_se,
+           anger_lowci = anger_mean - 1.96 * anger_se,
+           anger_upci = anger_mean + 1.96 * anger_se) %>%
+     select(YEAR_INTERVIEW, mid_date, smile_mean, smile_lowci, smile_upci, enjoy_mean, enjoy_lowci, enjoy_upci, worry_mean, worry_lowci, worry_upci, sad_mean, sad_lowci, sad_upci, stress_mean, stress_lowci, stress_upci, anger_mean, anger_lowci, anger_upci)
+
+Affective_myanmar
+
+#Pivoting the data to long format
+Affective_myanmar_long <- Affective_myanmar %>%
+  pivot_longer(
+    cols = c(smile_mean, smile_lowci, smile_upci, 
+      enjoy_mean, enjoy_lowci, enjoy_upci, 
+      worry_mean, worry_lowci, worry_upci, 
+      sad_mean, sad_lowci, sad_upci, 
+      stress_mean, stress_lowci, stress_upci, 
+      anger_mean, anger_lowci, anger_upci),
+    names_to = c("variable", "statistic"),
+    names_pattern = "(smile|enjoy|worry|sad|stress|anger)_(mean|lowci|upci)",
+    values_to = "value"
+  ) %>% pivot_wider(
+    names_from = statistic,
+    values_from = value
+  ) %>% 
+  mutate (variable = case_when(variable == "smile" ~ "Smiling",
+                               variable == "enjoy" ~ "Enjoyment",
+                               variable == "worry" ~ "Worry",
+                               variable == "sad" ~ "Sadness",
+                               variable == "stress" ~ "Stress",
+                               variable == "anger" ~ "Anger")) %>%
+  mutate(variable = factor(variable, levels = c("Smiling", "Enjoyment", "Worry", "Sadness", "Stress", "Anger")))
+
+
+myanmar_Affective_plot <-  Affective_myanmar_long %>% mutate(mean = mean * 100, lowci = lowci * 100, upci = upci * 100) %>%
+  ggplot(aes(x = mid_date, y = mean, ymin = lowci, ymax = upci, color = variable, group = variable)) +
+  
+  geom_vline(xintercept = as.Date("2015-11-08"), linetype = "dotted", color = "black") +
+  annotate("text", x = as.Date("2016-01-08"), y = 92, label = "Myanmar General Elections on November 8th, 2015\nThe National League for Democracy won a supermajority.", vjust = -0.5, hjust = 0, size = 4, fontface = "bold") +
+ 
+
+  geom_vline(xintercept = as.Date("2021-02-01"), linetype = "dotted", color = "black") +
+  annotate("text", x = as.Date("2021-04-01"), y = 92, label = "The military launched the coup d'état\non February 1st, 2021", vjust = -0.5, hjust = 0, size = 4, fontface = "bold") +
+ 
+  geom_point(size = 2) +
+  geom_line(size = 1) +
+  geom_ribbon(alpha = 0.2, aes(fill = variable), size=0) +
+  scale_color_manual(values = c("#f4a261", "#2a9d8f", "#e9c46a", "#264653", "#e76f51", "#d62828"), labels = c("Smiling", "Enjoyment", "Worry", "Sadness", "Stress", "Anger"), name = "Affect") +
+  scale_fill_manual(values = c("#f4a261", "#2a9d8f", "#e9c46a", "#264653", "#e76f51", "#d62828"), labels = c("Smiling", "Enjoyment", "Worry", "Sadness", "Stress", "Anger"), name = "Affect") +
+  scale_x_date(date_breaks = "1 year", date_labels = "%Y", limits = as.Date(c("2014-01-01", "2024-12-31")), expand = c(0, 0)) +
+  scale_y_continuous(limits = c(0, 100), expand = c(0, 0), breaks = seq(0, 100, 10)) +
+  theme_classic() +
+  theme_classic(base_size = 14) +
+  theme(
+    axis.ticks.x = element_line(color = 'black'),
+    axis.text.x = element_text(hjust = 0.5, color = 'black', size = 14), 
+    axis.text.y = element_text(hjust = 0.5, color = 'black', size = 14), 
+    axis.text.x.top = element_text(size = 14, face = 'bold'), 
+    plot.margin = unit(c(0.5, 1.2, -1, 0.3), 'lines'), 
+    panel.grid.major = element_blank(), 
+    panel.grid.minor = element_blank(),
+    legend.position = c(0.9, 0.13), 
+    axis.title = element_text(size = 14, face = 'bold'), 
+    legend.text = element_text(size = 12), 
+    legend.title = element_text(size = 12 , face = 'bold'), 
+    legend.background = element_blank(),
+    plot.title = element_text(size = 14, face = 'bold', hjust = 0.5)
+  ) +
+  labs(x = "Year", y = "Proportion of Respondents Feeling Each Affect", title = "Affective Well-being in Myanmar, 2014-2024\n")
+
+ggsave("figures/myanmar_Affective_plot.png", myanmar_Affective_plot, width = 12, height = 8)
+
