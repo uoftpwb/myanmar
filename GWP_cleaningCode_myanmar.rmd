@@ -26,7 +26,7 @@ gallupRaw <- rio::import("The_Gallup_022125.dat")
 
 # Create a character vector of the names of the variables we're interested in
 varRequired <- c(
-  "EMP_2010", "HHSIZE", "INCOME_1", "INCOME_2", "INCOME_3", "INCOME_4", "INCOME_5",
+  "COUNTRYNEW","EMP_2010", "HHSIZE", "INCOME_1", "INCOME_2", "INCOME_3", "INCOME_4", "INCOME_5",
   "MODE", "REGION_MMR", "WGT", "WP10251", "WP103", "WP108", "WP109", "WP110", "WP111", "WP112",
   "WP119", "WP1219", "WP1220", "WP1223", "WP1233", "WP13125",
   "WP1325", "WP134", "WP137", "WP138", "WP139", "WP14", "WP144", "WP145", "WP146",
@@ -38,7 +38,7 @@ varRequired <- c(
 gallupSubset <- gallupRaw %>% select(all_of(varRequired))
 
 # Save the gallupSubset data frame to a .rds file for later use
-saveRDS(gallupSubset, "(250618)GWP_RawSubset_MyanmarProject.rds")
+saveRDS(gallupSubset, "(250703)GWP_RawSubset_MyanmarProject.rds")
 ```
 
 

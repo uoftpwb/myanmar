@@ -1,16 +1,12 @@
----
-title: "Myanmar Project Analysis"
-author: Phyllis Lun
-date: '2025-06-18'
----
+#title: "Myanmar Project Analysis"
+#author: Phyllis Lun
+#date: '2025-06-18'
 
-# Libraries --------------------------------------------------------------------
-# List of required packages
-package_list <- c("data.table",  "Hmisc", "jtools", "sf", 
-              "ggplot2", "ggpubr", "ggrepel", "patchwork", "lubridate", "tidyverse", "EValue")
+#Loading libraries
+p_list <- c("data.table",  "Hmisc", "jtools", "sf", "ggplot2", "ggpubr", "ggrepel", "patchwork", "lubridate", "tidyverse", "EValue")
 
 # Check if packages are installed, install if needed, then load
-for (pkg in packages_list) {
+for (pkg in p_list) {
   if (!requireNamespace(pkg, quietly = TRUE)) {
     install.packages(pkg)
   }
@@ -143,6 +139,8 @@ gallup_myanmar <- gallup_world %>%
 gallup_myanmar %>% group_by(YEAR_INTERVIEW) %>% summarise(sum(WGT, na.rm = TRUE))
 
 saveRDS(gallup_myanmar, "data/GWP_myanmar_2014_2024.rds")
+gallup_myanmar <- readRDS("data/GWP_myanmar_2014_2024.rds") 
+
 
 #Creating the summary table for WP16 and WP18
 # Analysis ---------------------------------------------------------------------
@@ -192,8 +190,8 @@ myanmar_SWB_plot <-  SWB_myanmar_long %>%
   geom_point(size = 2) +
   geom_line(size = 1) +
   geom_ribbon(alpha = 0.2, aes(fill = variable), size=0) +
-  scale_color_manual(values = c("#e76f51", "#2a9d8f"), labels = c("Life Satisfaction", "Hope"), name = "Subjective Well-being") +
-  scale_fill_manual(values = c("#e76f51", "#2a9d8f"), labels = c("Life Satisfaction", "Hope"), name = "Subjective Well-being") +
+  scale_color_manual(values = c("#e76f51", "#2a9d8f"), labels = c("Life Satisfaction", "Hope"), name = "") +
+  scale_fill_manual(values = c("#e76f51", "#2a9d8f"), labels = c("Life Satisfaction", "Hope"), name = "") +
   scale_x_date(date_breaks = "1 year", date_labels = "%Y", limits = as.Date(c("2014-01-01", "2024-12-31")), expand = c(0, 0)) +
   scale_y_continuous(limits = c(0, 10), expand = c(0, 0), breaks = seq(0, 10, 1)) +
   theme_classic() +
