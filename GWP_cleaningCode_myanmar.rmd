@@ -22,7 +22,7 @@ library(data.table)
 # This code will not be run in the current Rmd
 
 # Import the data file "The_Gallup_022125.dat"
-gallupRaw <- rio::import("The_Gallup_022125.dat")
+gallupRaw <- rio::import("~/Documents/GitHub/DATA/The_Gallup_022125.dat")
 
 # Create a character vector of the names of the variables we're interested in
 varRequired <- c(
