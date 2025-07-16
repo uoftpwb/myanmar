@@ -40,7 +40,6 @@ dim(gallup_world_raw)
 objects(gallup_world_raw)
 
 ## Processing data -------------------------------------------------------------
-
 gallup_world <- gallup_world_raw %>%
   mutate(YEAR_INTERVIEW = as.numeric(as.character(YEAR_INTERVIEW))) %>%
   filter(YEAR_INTERVIEW >= 2014 & YEAR_INTERVIEW <= 2024) %>%
@@ -134,8 +133,25 @@ gallup_world <- gallup_world_raw %>%
 objects(gallup_world)
 
 gallup_myanmar <- gallup_world %>%
+  mutate(REGION_MMR = case_when(
+    REGION_MMR == 1 ~ "Chin State",
+    REGION_MMR == 2 ~ "Kachin State",
+    REGION_MMR == 3 ~ "Kayah State",
+    REGION_MMR == 4 ~ "Kayin State",
+    REGION_MMR == 5 ~ "Mon State",
+    REGION_MMR == 6 ~ "Rakhine State",
+    REGION_MMR == 7 ~ "Shan State",
+    REGION_MMR == 8 ~ "Ayeyarwady Region",
+    REGION_MMR == 9 ~ "Bago Region",
+    REGION_MMR == 10 ~ "Magway Region",
+    REGION_MMR == 11 ~ "Mandalay Region",
+    REGION_MMR == 12 ~ "Sagaing Region",
+    REGION_MMR == 13 ~ "Tanintharyi Region",
+    REGION_MMR == 14 ~ "Yangon Region",
+    REGION_MMR == 15 ~ "Naypyidaw Union Territory",
+    TRUE ~ NA_character_)) %>%
   filter(!is.na(REGION_MMR))
-
+                  
 gallup_myanmar %>% group_by(YEAR_INTERVIEW) %>% summarise(sum(WGT, na.rm = TRUE))
 
 saveRDS(gallup_myanmar, "data/GWP_myanmar_2014_2024.rds")
@@ -280,22 +296,17 @@ Affective_myanmar_long <- Affective_myanmar %>%
 
 myanmar_Affective_plot <-  Affective_myanmar_long %>% mutate(mean = mean * 100, lowci = lowci * 100, upci = upci * 100) %>%
   ggplot(aes(x = mid_date, y = mean, ymin = lowci, ymax = upci, color = variable, group = variable)) +
-  
   geom_vline(xintercept = as.Date("2015-11-08"), linetype = "dotted", color = "black") +
   annotate("text", x = as.Date("2016-01-08"), y = 92, label = "Myanmar General Elections on November 8th, 2015\nThe National League for Democracy won a supermajority.", vjust = -0.5, hjust = 0, size = 4, fontface = "bold") +
- 
-
   geom_vline(xintercept = as.Date("2021-02-01"), linetype = "dotted", color = "black") +
   annotate("text", x = as.Date("2021-04-01"), y = 92, label = "The military launched the coup d'état\non February 1st, 2021", vjust = -0.5, hjust = 0, size = 4, fontface = "bold") +
- 
-  geom_point(size = 2) +
+   geom_point(size = 2) +
   geom_line(size = 1) +
   geom_ribbon(alpha = 0.2, aes(fill = variable), size=0) +
   scale_color_manual(values = c("#f4a261", "#2a9d8f", "#e9c46a", "#264653", "#e76f51", "#d62828"), labels = c("Smiling", "Enjoyment", "Worry", "Sadness", "Stress", "Anger"), name = "Affect") +
   scale_fill_manual(values = c("#f4a261", "#2a9d8f", "#e9c46a", "#264653", "#e76f51", "#d62828"), labels = c("Smiling", "Enjoyment", "Worry", "Sadness", "Stress", "Anger"), name = "Affect") +
   scale_x_date(date_breaks = "1 year", date_labels = "%Y", limits = as.Date(c("2014-01-01", "2024-12-31")), expand = c(0, 0)) +
   scale_y_continuous(limits = c(0, 100), expand = c(0, 0), breaks = seq(0, 100, 10)) +
-  theme_classic() +
   theme_classic(base_size = 14) +
   theme(
     axis.ticks.x = element_line(color = 'black'),
@@ -316,3 +327,670 @@ myanmar_Affective_plot <-  Affective_myanmar_long %>% mutate(mean = mean * 100, 
 
 ggsave("figures/myanmar_Affective_plot.png", myanmar_Affective_plot, width = 12, height = 8)
 
+
+##Descriptives of moderators ---------------------------------------------------
+objects(gallup_myanmar)
+
+
+### Distribution of religions (WP1233) in 2014 ----------------------------------
+#Get the weighted distribution of religions in 2014
+#multiple the frequency by the weight
+myanmar_desc_distribution_of_religions_plot_2014<- gallup_myanmar%>% filter(YEAR_INTERVIEW==2014) %>% filter(!is.na(WP1233)) %>% 
+  group_by(WP1233) %>% 
+  summarise(religion_sum = sum(WGT)) %>%
+  mutate(WP1233 = as.numeric(WP1233)) %>%
+  mutate(WP1233 = case_when(WP1233 == 0 ~ "Other",
+                            WP1233 == 1 ~ "Christianity\n(Roman Catholic,\nCatholic)",
+                            WP1233 == 2 ~ "Christianity\n(Protestant,\nAnglican,\nEvangelical,\netc.)",
+                            WP1233 == 3 ~ "Christianity\n(Eastern Orthodox,\nOrthodoxy,\netc.)",
+                            WP1233 == 4 ~ "Islam/Muslim",
+                            WP1233 == 5 ~ "Islam/Muslim\n(Shiite)",
+                            WP1233 == 6 ~ "Islam/Muslim\n(Sunni)",
+                            WP1233 == 7 ~ "Druze",
+                            WP1233 == 8 ~ "Hinduism",
+                            WP1233 == 9 ~ "Buddhism",
+                            WP1233 == 10 ~ "Primal-indigenous/African Traditional/Animist",
+                            WP1233 == 11 ~ "Chinese Traditional Religion/Confucianism",
+                            WP1233 == 12 ~ "Sikhism",
+                            WP1233 == 13 ~ "Juche",
+                            WP1233 == 14 ~ "Spiritism",
+                            WP1233 == 15 ~ "Judaism",
+                            WP1233 == 16 ~ "Baha'i",
+                            WP1233 == 17 ~ "Jainism",
+                            WP1233 == 18 ~ "Shinto",
+                            WP1233 == 19 ~ "Cao Dai",
+                            WP1233 == 20 ~ "Zoroastrianism",
+                            WP1233 == 21 ~ "Tenrikyo",
+                            WP1233 == 22 ~ "Neo-Paganism",
+                            WP1233 == 23 ~ "Unitarian-Universalism",
+                            WP1233 == 24 ~ "Rastafarianism",
+                            WP1233 == 25 ~ "Scientology",
+                            WP1233 == 26 ~ "Secular\n(Nonreligious,\nAgnostic,\nAtheist,\nNone)",
+                            WP1233 == 28 ~ "Christian\n(not specified)",
+                            WP1233 == 29 ~ "Taoism/Daoism",
+                            TRUE ~ "Other")) %>%
+  ggplot(aes(x = WP1233, y = religion_sum)) +
+  scale_y_continuous(limits = c(0, 1000), expand = c(0, 0), breaks = seq(0, 1000, 100)) +
+  geom_bar(stat = "identity") +
+  theme_classic(base_size = 14) +
+  theme(
+    axis.ticks.x = element_line(color = 'black'),
+    axis.text.x = element_text(hjust = 0.5, color = 'black', size = 10), 
+    axis.text.y = element_text(hjust = 0.5, color = 'black', size = 14), 
+    axis.text.x.top = element_text(size = 14, face = 'bold'), 
+    plot.margin = unit(c(0.5, 1.2, -1, 0.3), 'lines'), 
+    panel.grid.major = element_blank(), 
+    panel.grid.minor = element_blank(),
+    legend.position = c(0.9, 0.13), 
+    axis.title = element_text(size = 14, face = 'bold'), 
+    legend.text = element_text(size = 12), 
+    legend.title = element_text(size = 12 , face = 'bold'), 
+    legend.background = element_blank(),
+    plot.title = element_text(size = 14, face = 'bold', hjust = 0.5)
+  ) +
+  labs(x = "Religion", y = "Proportion of Respondents", 
+  title = "Distribution of Religions in Myanmar, 2014\n")
+
+ggsave("figures/myanmar_desc_distribution_of_religions_plot_2014.png", myanmar_desc_distribution_of_religions_plot_2014, width = 12, height = 8)
+
+#2024
+myanmar_desc_distribution_of_religions_plot_2024<- gallup_myanmar%>% filter(YEAR_INTERVIEW==2024) %>% filter(!is.na(WP1233)) %>% 
+  group_by(WP1233) %>% 
+  summarise(religion_sum = sum(WGT)) %>%
+  mutate(WP1233 = as.numeric(WP1233)) %>%
+  mutate(WP1233 = case_when(WP1233 == 0 ~ "Other",
+                            WP1233 == 1 ~ "Christianity\n(Roman Catholic,\nCatholic)",
+                            WP1233 == 2 ~ "Christianity\n(Protestant,\nAnglican,\nEvangelical,\netc.)",
+                            WP1233 == 3 ~ "Christianity\n(Eastern Orthodox,\nOrthodoxy,\netc.)",
+                            WP1233 == 4 ~ "Islam/Muslim",
+                            WP1233 == 5 ~ "Islam/Muslim\n(Shiite)",
+                            WP1233 == 6 ~ "Islam/Muslim\n(Sunni)",
+                            WP1233 == 7 ~ "Druze",
+                            WP1233 == 8 ~ "Hinduism",
+                            WP1233 == 9 ~ "Buddhism",
+                            WP1233 == 10 ~ "Primal-indigenous/African Traditional/Animist",
+                            WP1233 == 11 ~ "Chinese Traditional Religion/Confucianism",
+                            WP1233 == 12 ~ "Sikhism",
+                            WP1233 == 13 ~ "Juche",
+                            WP1233 == 14 ~ "Spiritism",
+                            WP1233 == 15 ~ "Judaism",
+                            WP1233 == 16 ~ "Baha'i",
+                            WP1233 == 17 ~ "Jainism",
+                            WP1233 == 18 ~ "Shinto",
+                            WP1233 == 19 ~ "Cao Dai",
+                            WP1233 == 20 ~ "Zoroastrianism",
+                            WP1233 == 21 ~ "Tenrikyo",
+                            WP1233 == 22 ~ "Neo-Paganism",
+                            WP1233 == 23 ~ "Unitarian-Universalism",
+                            WP1233 == 24 ~ "Rastafarianism",
+                            WP1233 == 25 ~ "Scientology",
+                            WP1233 == 26 ~ "Secular\n(Nonreligious,\nAgnostic,\nAtheist,\nNone)",
+                            WP1233 == 28 ~ "Christian\n(not specified)",
+                            WP1233 == 29 ~ "Taoism/Daoism",
+                            TRUE ~ "Other")) %>%
+  ggplot(aes(x = WP1233, y = religion_sum)) +
+  scale_y_continuous(limits = c(0, 1000), expand = c(0, 0), breaks = seq(0, 1000, 100)) +
+  geom_bar(stat = "identity") +
+  theme_classic(base_size = 14) +
+  theme(
+    axis.ticks.x = element_line(color = 'black'),
+    axis.text.x = element_text(hjust = 0.5, color = 'black', size = 10), 
+    axis.text.y = element_text(hjust = 0.5, color = 'black', size = 14), 
+    axis.text.x.top = element_text(size = 14, face = 'bold'), 
+    plot.margin = unit(c(0.5, 1.2, -1, 0.3), 'lines'), 
+    panel.grid.major = element_blank(), 
+    panel.grid.minor = element_blank(),
+    legend.position = c(0.9, 0.13), 
+    axis.title = element_text(size = 14, face = 'bold'), 
+    legend.text = element_text(size = 12), 
+    legend.title = element_text(size = 12 , face = 'bold'), 
+    legend.background = element_blank(),
+    plot.title = element_text(size = 14, face = 'bold', hjust = 0.5)
+  ) +
+  labs(x = "Religion", y = "Proportion of Respondents", 
+  title = "Distribution of Religions in Myanmar, 2024\n")
+
+ggsave("figures/myanmar_desc_distribution_of_religions_plot_2024.png", myanmar_desc_distribution_of_religions_plot_2024, width = 12, height = 8)
+
+
+  
+###Freedom of Media ------------------------------------------------------------
+myanmar_desc_freedom_of_media_plot<- gallup_myanmar %>%
+  group_by(YEAR_INTERVIEW) %>%
+  summarise(
+    freedom_of_media_mean = stats::weighted.mean(WP10251, WGT, na.rm = TRUE),
+    freedom_of_media_se = sqrt(Hmisc::wtd.var(WP10251, WGT, na.rm = TRUE) / sum(WGT, na.rm = TRUE))
+  ) %>%
+  mutate(freedom_of_media_lowci = freedom_of_media_mean - 1.96 * freedom_of_media_se,
+         freedom_of_media_upci = freedom_of_media_mean + 1.96 * freedom_of_media_se) %>%
+  select(YEAR_INTERVIEW, freedom_of_media_mean, freedom_of_media_lowci, freedom_of_media_upci) %>%
+  #Plotting the data
+  ggplot(aes(x = YEAR_INTERVIEW, y = freedom_of_media_mean*100)) +
+  geom_point() +
+  geom_errorbar(aes(ymin = freedom_of_media_lowci*100, ymax = freedom_of_media_upci*100), width = 0.2) +
+  scale_x_continuous(breaks = seq(2014, 2024, 1)) +
+  scale_y_continuous(limits = c(0, 100), expand = c(0, 0), breaks = seq(0, 100, 10)) +
+  theme_classic(base_size = 14) +
+  theme(
+    axis.ticks.x = element_line(color = 'black'),
+    axis.text.x = element_text(hjust = 0.5, color = 'black', size = 14), 
+    axis.text.y = element_text(hjust = 0.5, color = 'black', size = 14), 
+    axis.text.x.top = element_text(size = 14, face = 'bold'), 
+    plot.margin = unit(c(0.5, 1.2, -1, 0.3), 'lines'), 
+    panel.grid.major = element_blank(), 
+    panel.grid.minor = element_blank(),
+    legend.position = c(0.9, 0.13), 
+    axis.title = element_text(size = 14, face = 'bold'), 
+    legend.text = element_text(size = 12), 
+    legend.title = element_text(size = 12 , face = 'bold'), 
+    legend.background = element_blank(),
+    plot.title = element_text(size = 14, face = 'bold', hjust = 0.5)
+  ) +
+  labs(x = "Year", y = "Proportion of Respondents Feeling Freedom of Media", 
+  title = "Freedom of Media in Myanmar, 2014-2024\n")
+
+ggsave("figures/myanmar_desc_freedom_of_media_plot.png", myanmar_desc_freedom_of_media_plot, width = 12, height = 8)
+
+###Racial/Ethnic Minorities ----------------------------------------------------
+
+objects(gallup_myanmar)
+
+myanmar_desc_racial_ethnic_minorities_plot<- gallup_myanmar %>%
+  group_by(YEAR_INTERVIEW) %>%
+  summarise(
+    racial_ethnic_minorities_mean = stats::weighted.mean(WP103, WGT, na.rm = TRUE),
+    racial_ethnic_minorities_se = sqrt(Hmisc::wtd.var(WP103, WGT, na.rm = TRUE) / sum(WGT, na.rm = TRUE))
+  ) %>%
+  mutate(racial_ethnic_minorities_lowci = racial_ethnic_minorities_mean - 1.96 * racial_ethnic_minorities_se,
+         racial_ethnic_minorities_upci = racial_ethnic_minorities_mean + 1.96 * racial_ethnic_minorities_se) %>%
+  select(YEAR_INTERVIEW, racial_ethnic_minorities_mean, racial_ethnic_minorities_lowci, racial_ethnic_minorities_upci) %>%
+   #Plotting the data
+  ggplot(aes(x = YEAR_INTERVIEW, y = racial_ethnic_minorities_mean*100)) +
+  geom_point() +
+  geom_errorbar(aes(ymin = racial_ethnic_minorities_lowci*100, ymax = racial_ethnic_minorities_upci*100), width = 0.2) +
+  scale_x_continuous(breaks = seq(2014, 2024, 1)) +
+  scale_y_continuous(limits = c(0, 100), expand = c(0, 0), breaks = seq(0, 100, 10)) +
+  theme_classic(base_size = 14) +
+  theme(
+    axis.ticks.x = element_line(color = 'black'),
+    axis.text.x = element_text(hjust = 0.5, color = 'black', size = 14), 
+    axis.text.y = element_text(hjust = 0.5, color = 'black', size = 14), 
+    axis.text.x.top = element_text(size = 14, face = 'bold'), 
+    plot.margin = unit(c(0.5, 1.2, -1, 0.3), 'lines'), 
+    panel.grid.major = element_blank(), 
+    panel.grid.minor = element_blank(),
+    legend.position = c(0.9, 0.13), 
+    axis.title = element_text(size = 14, face = 'bold'), 
+    legend.text = element_text(size = 12), 
+    legend.title = element_text(size = 12 , face = 'bold'), 
+    legend.background = element_blank(),
+    plot.title = element_text(size = 14, face = 'bold', hjust = 0.5)
+  ) +
+  labs(x = "Year", y = "Proportion of Respondents Agreeing", 
+  title = "Friendliness of Their City/ Area to Racial/Ethnic Minorities in Myanmar, 2014-2024\n") 
+
+ggsave("figures/myanmar_desc_racial_ethnic_minorities_plot.png", myanmar_desc_racial_ethnic_minorities_plot, width = 12, height = 8)
+
+###Importance of Religion (WP109) ------------------------------------------------------
+
+myanmar_desc_importance_religion_plot<- gallup_myanmar %>%
+  group_by(YEAR_INTERVIEW) %>%
+  summarise(
+    importance_of_religion_mean = stats::weighted.mean(WP109, WGT, na.rm = TRUE),
+    importance_of_religion_se = sqrt(Hmisc::wtd.var(WP109, WGT, na.rm = TRUE) / sum(WGT, na.rm = TRUE))
+  ) %>%
+  mutate(importance_of_religion_lowci = importance_of_religion_mean - 1.96 * importance_of_religion_se,
+         importance_of_religion_upci = importance_of_religion_mean + 1.96 * importance_of_religion_se) %>%
+  select(YEAR_INTERVIEW, importance_of_religion_mean, importance_of_religion_lowci, importance_of_religion_upci) %>%
+  #Plotting the data
+  ggplot(aes(x = YEAR_INTERVIEW, y = importance_of_religion_mean*100)) +
+  geom_point() +
+  geom_errorbar(aes(ymin = importance_of_religion_lowci*100, ymax = importance_of_religion_upci*100), width = 0.2) +
+  scale_x_continuous(breaks = seq(2014, 2024, 1)) +
+  scale_y_continuous(limits = c(0, 100), expand = c(0, 0), breaks = seq(0, 100, 10)) +
+  theme_classic(base_size = 14) +
+  theme(
+    axis.ticks.x = element_line(color = 'black'),
+    axis.text.x = element_text(hjust = 0.5, color = 'black', size = 14), 
+    axis.text.y = element_text(hjust = 0.5, color = 'black', size = 14), 
+    axis.text.x.top = element_text(size = 14, face = 'bold'), 
+    plot.margin = unit(c(0.5, 1.2, -1, 0.3), 'lines'), 
+    panel.grid.major = element_blank(), 
+    panel.grid.minor = element_blank(),
+    legend.position = c(0.9, 0.13), 
+    axis.title = element_text(size = 14, face = 'bold'), 
+    legend.text = element_text(size = 12), 
+    legend.title = element_text(size = 12 , face = 'bold'), 
+    legend.background = element_blank(),
+    plot.title = element_text(size = 14, face = 'bold', hjust = 0.5)
+  ) +
+  labs(x = "Year", y = "Proportion of Respondents Agreeing", 
+  title = "Importance of Religion in Myanmar, 2014-2024\n") 
+ggsave("figures/myanmar_desc_importance_religion_plot.png", myanmar_desc_importance_religion_plot, width = 12, height = 8)
+
+##Benevolence of People --------------------------------------------------------
+
+###Donating Money (WP108), Volunteering (WP109), Helping Strangers (WP110) ------------------------------------------------------
+
+myanmar_desc_benevolence_plot<- gallup_myanmar %>%
+  group_by(YEAR_INTERVIEW) %>%
+  summarise(
+    donating_money_mean = stats::weighted.mean(WP108, WGT, na.rm = TRUE),
+    donating_money_se = sqrt(Hmisc::wtd.var(WP108, WGT, na.rm = TRUE) / sum(WGT, na.rm = TRUE)),
+    volunteering_mean = stats::weighted.mean(WP109, WGT, na.rm = TRUE),
+    volunteering_se = sqrt(Hmisc::wtd.var(WP109, WGT, na.rm = TRUE) / sum(WGT, na.rm = TRUE)),
+    helping_others_mean = stats::weighted.mean(WP110, WGT, na.rm = TRUE),
+    helping_others_se = sqrt(Hmisc::wtd.var(WP110, WGT, na.rm = TRUE) / sum(WGT, na.rm = TRUE))
+  ) %>%
+  mutate(donating_money_lowci = donating_money_mean - 1.96 * donating_money_se,
+         donating_money_upci = donating_money_mean + 1.96 * donating_money_se,
+         volunteering_lowci = volunteering_mean - 1.96 * volunteering_se,
+         volunteering_upci = volunteering_mean + 1.96 * volunteering_se,
+         helping_others_lowci = helping_others_mean - 1.96 * helping_others_se,
+         helping_others_upci = helping_others_mean + 1.96 * helping_others_se) %>%
+  select(YEAR_INTERVIEW, donating_money_mean, donating_money_lowci, donating_money_upci, volunteering_mean, 
+  volunteering_lowci, volunteering_upci, helping_others_mean, helping_others_lowci, helping_others_upci) %>%
+  #Plotting all three variables on the same plot
+  pivot_longer(
+    cols = c(donating_money_mean, donating_money_lowci, donating_money_upci, 
+      volunteering_mean, volunteering_lowci, volunteering_upci, 
+      helping_others_mean, helping_others_lowci, helping_others_upci),
+    names_to = c("variable", "statistic"),
+    names_pattern = "(donating_money|volunteering|helping_others)_(mean|lowci|upci)",
+    values_to = "value"
+  ) %>% pivot_wider(
+    names_from = statistic,
+    values_from = value
+  ) %>% 
+  mutate (variable = case_when(variable == "donating_money" ~ "Donating Money",
+                               variable == "volunteering" ~ "Volunteering",
+                               variable == "helping_others" ~ "Helping Strangers")) %>%
+  mutate(variable = factor(variable, labels = c("Donating Money", "Volunteering", "Helping Strangers"))) %>%
+  ggplot(aes(x = YEAR_INTERVIEW, y = mean*100, ymin = lowci*100, ymax = upci*100, color = variable, group = variable)) +
+  geom_point() +
+  geom_errorbar(width = 0.2) +
+  geom_line() +
+  scale_x_continuous(breaks = seq(2014, 2024, 1)) +
+  scale_y_continuous(limits = c(0, 100), expand = c(0, 0), breaks = seq(0, 100, 10)) +
+  theme_classic(base_size = 14) +
+  theme(
+    axis.ticks.x = element_line(color = 'black'),
+    axis.text.x = element_text(hjust = 0.5, color = 'black', size = 14), 
+    axis.text.y = element_text(hjust = 0.5, color = 'black', size = 14), 
+    axis.text.x.top = element_text(size = 14, face = 'bold'), 
+    plot.margin = unit(c(0.5, 1.2, -1, 0.3), 'lines'), 
+    panel.grid.major = element_blank(), 
+    panel.grid.minor = element_blank(),
+    legend.position = c(0.9, 0.1), 
+    axis.title = element_text(size = 14, face = 'bold'), 
+    legend.text = element_text(size = 12), 
+    legend.title = element_blank(), 
+    legend.background = element_blank(),
+    plot.title = element_text(size = 14, face = 'bold', hjust = 0.5)
+  ) +
+  labs(x = "Year", y = "Proportion of Respondents Agreeing", 
+  title = "Benevolence of People in Myanmar, 2014-2024\n") 
+
+ggsave("figures/myanmar_desc_benevolence_plot.png", myanmar_desc_benevolence_plot, width = 12, height = 8)
+
+##Would like to live in a different country (WP1325) ------------------------------------------------------
+
+myanmar_desc_different_country_plot<- gallup_myanmar %>%
+  filter(!is.na(WP1325)) %>%
+  group_by(YEAR_INTERVIEW) %>%
+  summarise(
+    would_like_to_live_in_different_country_mean = stats::weighted.mean(WP1325, WGT, na.rm = TRUE),
+    would_like_to_live_in_different_country_se = sqrt(Hmisc::wtd.var(WP1325, WGT, na.rm = TRUE) / sum(WGT, na.rm = TRUE))
+  ) %>%
+  mutate(would_like_to_live_in_different_country_lowci = would_like_to_live_in_different_country_mean - 1.96 * would_like_to_live_in_different_country_se,
+         would_like_to_live_in_different_country_upci = would_like_to_live_in_different_country_mean + 1.96 * would_like_to_live_in_different_country_se) %>%
+  select(YEAR_INTERVIEW, would_like_to_live_in_different_country_mean, would_like_to_live_in_different_country_lowci, would_like_to_live_in_different_country_upci) %>%
+  #Plotting the data
+  ggplot(aes(x = YEAR_INTERVIEW, y = would_like_to_live_in_different_country_mean*100)) +
+  geom_point() +
+  geom_errorbar(aes(ymin = would_like_to_live_in_different_country_lowci*100, ymax = would_like_to_live_in_different_country_upci*100), width = 0.15) +
+  scale_x_continuous(breaks = seq(2014, 2024, 1)) +
+  scale_y_continuous(limits = c(0, 100), expand = c(0, 0), breaks = seq(0, 100, 10)) +
+  theme_classic(base_size = 14) +
+  theme(
+    axis.ticks.x = element_line(color = 'black'),
+    axis.text.x = element_text(hjust = 0.5, color = 'black', size = 14), 
+    axis.text.y = element_text(hjust = 0.5, color = 'black', size = 14), 
+    axis.text.x.top = element_text(size = 14, face = 'bold'), 
+    plot.margin = unit(c(0.5, 1.2, -1, 0.3), 'lines'), 
+    panel.grid.major = element_blank(), 
+    panel.grid.minor = element_blank(),
+    legend.position = c(0.9, 0.13), 
+    axis.title = element_text(size = 14, face = 'bold'), 
+    legend.text = element_text(size = 12), 
+    legend.title = element_blank(), 
+    legend.background = element_blank(),
+    plot.title = element_text(size = 14, face = 'bold', hjust = 0.5)
+  ) +
+  labs(x = "Year", y = "Proportion of Respondents", 
+  title = "Would like to live in a different country in Myanmar, 2014-2024\n") 
+
+ggsave("figures/myanmar_desc_different_country_plot.png", myanmar_desc_different_country_plot, width = 12, height = 8)
+
+
+###Confidence in military (WP137), 2015-2020------------------------------------------------------
+
+table(gallup_myanmar$WP137)
+
+
+myanmar_desc_confidence_in_military_plot<- gallup_myanmar %>%
+  filter(!is.na(WP137)) %>%
+  group_by(YEAR_INTERVIEW) %>%
+  summarize(prop=sum(WGT[WP137=="Yes"])/sum(WGT),prop_se=sqrt(prop*(1-prop)/sum(WGT))) %>%
+  mutate(prop_lowci=prop-1.96*prop_se, prop_upci=prop+1.96*prop_se) %>%
+  select(YEAR_INTERVIEW, prop, prop_lowci, prop_upci) %>%
+  #Plotting the data
+  ggplot(aes(x = YEAR_INTERVIEW, y = prop*100)) +
+  geom_point() + 
+  geom_errorbar(aes(ymin = prop_lowci*100, ymax = prop_upci*100), width = 0.15) +
+  scale_x_continuous(breaks = seq(2014, 2024, 1)) +
+  scale_y_continuous(limits = c(0, 100), expand = c(0, 0), breaks = seq(0, 100, 10)) +
+  theme_classic(base_size = 14) +
+  theme(
+    axis.ticks.x = element_line(color = 'black'),
+    axis.text.x = element_text(hjust = 0.5, color = 'black', size = 14), 
+    axis.text.y = element_text(hjust = 0.5, color = 'black', size = 14), 
+    axis.text.x.top = element_text(size = 14, face = 'bold'), 
+    plot.margin = unit(c(0.5, 1.2, -1, 0.3), 'lines'), 
+    panel.grid.major = element_blank(), 
+    panel.grid.minor = element_blank(),
+    legend.position = c(0.9, 0.13), 
+    axis.title = element_text(size = 14, face = 'bold'), 
+    legend.text = element_text(size = 12), 
+    legend.title = element_blank(), 
+    legend.background = element_blank(),
+    plot.title = element_text(size = 14, face = 'bold', hjust = 0.5)
+  ) +
+  labs(x = "Year", y = "Proportion of Respondents Agreeing", 
+  title = "Having Confidence in Military in Myanmar, 2014-2024\n") 
+
+ggsave("figures/myanmar_desc_confidence_in_military_plot.png", myanmar_desc_confidence_in_military_plot, width = 12, height = 8)
+
+
+###Confidence in judicial system (WP138) ------------------------------------------------------
+
+
+myanmar_desc_confidence_in_judicial_system_plot<- gallup_myanmar %>%
+  filter(!is.na(WP138)) %>%
+  group_by(YEAR_INTERVIEW) %>%
+  summarize(prop=sum(WGT[WP138=="Yes"])/sum(WGT),prop_se=sqrt(prop*(1-prop)/sum(WGT))) %>%
+  mutate(prop_lowci=prop-1.96*prop_se, prop_upci=prop+1.96*prop_se) %>%
+  select(YEAR_INTERVIEW, prop, prop_lowci, prop_upci) %>%
+  #Plotting the data
+  ggplot(aes(x = YEAR_INTERVIEW, y = prop*100)) +
+  geom_point() + 
+  geom_errorbar(aes(ymin = prop_lowci*100, ymax = prop_upci*100), width = 0.15) +
+  scale_x_continuous(breaks = seq(2014, 2024, 1)) +
+  scale_y_continuous(limits = c(0, 100), expand = c(0, 0), breaks = seq(0, 100, 10)) +
+  theme_classic(base_size = 14) +
+  theme(
+    axis.ticks.x = element_line(color = 'black'),
+    axis.text.x = element_text(hjust = 0.5, color = 'black', size = 14), 
+    axis.text.y = element_text(hjust = 0.5, color = 'black', size = 14), 
+    axis.text.x.top = element_text(size = 14, face = 'bold'), 
+    plot.margin = unit(c(0.5, 1.2, -1, 0.3), 'lines'), 
+    panel.grid.major = element_blank(), 
+    panel.grid.minor = element_blank(),
+    legend.position = c(0.9, 0.13), 
+    axis.title = element_text(size = 14, face = 'bold'), 
+    legend.text = element_text(size = 12), 
+    legend.title = element_blank(), 
+    legend.background = element_blank(),
+    plot.title = element_text(size = 14, face = 'bold', hjust = 0.5)
+  ) +
+  labs(x = "Year", y = "Proportion of Respondents Agreeing", 
+  title = "Having Confidence in Judicial System in Myanmar, 2014-2024\n") 
+
+ggsave("figures/myanmar_desc_confidence_in_judicial_system_plot.png", myanmar_desc_confidence_in_judicial_system_plot, width = 12, height = 8)
+
+
+### Confidence in national government (WP139) ------------------------------------------------------
+
+
+myanmar_desc_confidence_in_national_government_plot<- gallup_myanmar %>%
+  filter(!is.na(WP139)) %>%
+  group_by(YEAR_INTERVIEW) %>%
+  summarize(prop=sum(WGT[WP139=="Yes"])/sum(WGT),prop_se=sqrt(prop*(1-prop)/sum(WGT))) %>%
+  mutate(prop_lowci=prop-1.96*prop_se, prop_upci=prop+1.96*prop_se) %>%
+  select(YEAR_INTERVIEW, prop, prop_lowci, prop_upci) %>%
+  #Plotting the data  
+  ggplot(aes(x = YEAR_INTERVIEW, y = prop*100)) +
+  geom_point() + 
+  geom_errorbar(aes(ymin = prop_lowci*100, ymax = prop_upci*100), width = 0.15) +
+  scale_x_continuous(breaks = seq(2014, 2024, 1)) +
+  scale_y_continuous(limits = c(0, 100), expand = c(0, 0), breaks = seq(0, 100, 10)) +
+  theme_classic(base_size = 14) +
+  theme(
+    axis.ticks.x = element_line(color = 'black'),
+    axis.text.x = element_text(hjust = 0.5, color = 'black', size = 14), 
+    axis.text.y = element_text(hjust = 0.5, color = 'black', size = 14), 
+    axis.text.x.top = element_text(size = 14, face = 'bold'), 
+    plot.margin = unit(c(0.5, 1.2, -1, 0.3), 'lines'), 
+    panel.grid.major = element_blank(), 
+    panel.grid.minor = element_blank(),
+    legend.position = c(0.9, 0.13), 
+    axis.title = element_text(size = 14, face = 'bold'), 
+    legend.text = element_text(size = 12), 
+    legend.title = element_blank(), 
+    legend.background = element_blank(),
+    plot.title = element_text(size = 14, face = 'bold', hjust = 0.5)
+  ) +
+  labs(x = "Year", y = "Proportion of Respondents Agreeing", 
+  title = "Having Confidence in National Government in Myanmar, 2014-2024\n") 
+
+ggsave("figures/myanmar_desc_confidence_in_national_government_plot.png", myanmar_desc_confidence_in_national_government_plot, width = 12, height = 8)
+
+
+### Confidence in honesty of election (WP144) ------------------------------------------------------
+
+myanmar_desc_confidence_in_honesty_of_election_plot<- gallup_myanmar %>%
+  filter(!is.na(WP144)) %>%
+  group_by(YEAR_INTERVIEW) %>%
+  summarize(prop=sum(WGT[WP144=="Yes"])/sum(WGT),prop_se=sqrt(prop*(1-prop)/sum(WGT))) %>%
+  mutate(prop_lowci=prop-1.96*prop_se, prop_upci=prop+1.96*prop_se) %>%
+  select(YEAR_INTERVIEW, prop, prop_lowci, prop_upci) %>%
+  #Plotting the data
+  ggplot(aes(x = YEAR_INTERVIEW, y = prop*100)) +
+  geom_point() + 
+  geom_errorbar(aes(ymin = prop_lowci*100, ymax = prop_upci*100), width = 0.15) +
+  scale_x_continuous(breaks = seq(2014, 2024, 1)) +
+  scale_y_continuous(limits = c(0, 100), expand = c(0, 0), breaks = seq(0, 100, 10)) +
+  theme_classic(base_size = 14) +
+  theme(
+    axis.ticks.x = element_line(color = 'black'),
+    axis.text.x = element_text(hjust = 0.5, color = 'black', size = 14), 
+    axis.text.y = element_text(hjust = 0.5, color = 'black', size = 14), 
+    axis.text.x.top = element_text(size = 14, face = 'bold'), 
+    plot.margin = unit(c(0.5, 1.2, -1, 0.3), 'lines'), 
+    panel.grid.major = element_blank(), 
+    panel.grid.minor = element_blank(),
+    legend.position = c(0.9, 0.13), 
+    axis.title = element_text(size = 14, face = 'bold'), 
+    legend.text = element_text(size = 12), 
+    legend.title = element_blank(), 
+    legend.background = element_blank(),
+    plot.title = element_text(size = 14, face = 'bold', hjust = 0.5)
+  ) +
+  labs(x = "Year", y = "Proportion of Respondents Agreeing", 
+  title = "Having Confidence in Honesty of Election in Myanmar, 2014-2024\n") 
+
+ggsave("figures/myanmar_desc_confidence_in_honesty_of_election_plot.png", myanmar_desc_confidence_in_honesty_of_election_plot, width = 12, height = 8)
+
+### Approval of job performance of head of state (WP150) ------------------------------------------------------
+
+myanmar_desc_approval_of_head_of_state_plot<- gallup_myanmar %>%
+  filter(!is.na(WP150)) %>%
+  group_by(YEAR_INTERVIEW) %>%
+  summarize(prop=sum(WGT[WP150=="Approved"])/sum(WGT),prop_se=sqrt(prop*(1-prop)/sum(WGT))) %>%
+  mutate(prop_lowci=prop-1.96*prop_se, prop_upci=prop+1.96*prop_se) %>%
+  select(YEAR_INTERVIEW, prop, prop_lowci, prop_upci) %>%
+  #Plotting the data
+  ggplot(aes(x = YEAR_INTERVIEW, y = prop*100)) +
+  geom_point() + 
+  geom_errorbar(aes(ymin = prop_lowci*100, ymax = prop_upci*100), width = 0.15) +
+  scale_x_continuous(breaks = seq(2014, 2024, 1)) +
+  scale_y_continuous(limits = c(0, 100), expand = c(0, 0), breaks = seq(0, 100, 10)) +
+  theme_classic(base_size = 14) +
+  theme(
+    axis.ticks.x = element_line(color = 'black'),
+    axis.text.x = element_text(hjust = 0.5, color = 'black', size = 14), 
+    axis.text.y = element_text(hjust = 0.5, color = 'black', size = 14), 
+    axis.text.x.top = element_text(size = 14, face = 'bold'), 
+    plot.margin = unit(c(0.5, 1.2, -1, 0.3), 'lines'), 
+    panel.grid.major = element_blank(), 
+    panel.grid.minor = element_blank(),
+    legend.position = c(0.9, 0.13), 
+    axis.title = element_text(size = 14, face = 'bold'), 
+    legend.text = element_text(size = 12), 
+    legend.title = element_blank(), 
+    legend.background = element_blank(),
+    plot.title = element_text(size = 14, face = 'bold', hjust = 0.5)
+  ) +
+  labs(x = "Year", y = "Proportion of Respondents", 
+  title = "Approving Job Performance of country leadership in Myanmar, 2014-2024\n") 
+
+ggsave("figures/myanmar_desc_approval_of_head_of_state_plot.png", myanmar_desc_approval_of_head_of_state_plot, width = 12, height = 8)
+
+###Not enough food (WP40) ------------------------------------------------------
+
+myanmar_desc_not_enough_food_plot<- gallup_myanmar %>%
+  filter(!is.na(WP40)) %>%
+  group_by(YEAR_INTERVIEW) %>%
+  summarize(prop=sum(WGT[WP40=="Yes"])/sum(WGT),prop_se=sqrt(prop*(1-prop)/sum(WGT))) %>%
+  mutate(prop_lowci=prop-1.96*prop_se, prop_upci=prop+1.96*prop_se) %>%
+  select(YEAR_INTERVIEW, prop, prop_lowci, prop_upci) %>%
+  #Plotting the data
+  ggplot(aes(x = YEAR_INTERVIEW, y = prop*100)) +
+  geom_point() + 
+  geom_errorbar(aes(ymin = prop_lowci*100, ymax = prop_upci*100), width = 0.15) +
+  scale_x_continuous(breaks = seq(2014, 2024, 1)) +
+  scale_y_continuous(limits = c(0, 100), expand = c(0, 0), breaks = seq(0, 100, 10)) +
+  theme_classic(base_size = 14) +
+  theme(
+    axis.ticks.x = element_line(color = 'black'),
+    axis.text.x = element_text(hjust = 0.5, color = 'black', size = 14), 
+    axis.text.y = element_text(hjust = 0.5, color = 'black', size = 14), 
+    axis.text.x.top = element_text(size = 14, face = 'bold'), 
+    plot.margin = unit(c(0.5, 1.2, -1, 0.3), 'lines'), 
+    panel.grid.major = element_blank(), 
+    panel.grid.minor = element_blank(),
+    legend.position = c(0.9, 0.13), 
+    axis.title = element_text(size = 14, face = 'bold'), 
+    legend.text = element_text(size = 12), 
+    legend.title = element_blank(), 
+    legend.background = element_blank(),
+    plot.title = element_text(size = 14, face = 'bold', hjust = 0.5)
+  ) +
+  labs(x = "Year", y = "Proportion of Respondents", 
+  title = "Not enough food at least one day in the past 12 monthsin Myanmar, 2014-2024\n") 
+
+ggsave("figures/myanmar_desc_not_enough_food_plot.png", myanmar_desc_not_enough_food_plot, width = 12, height = 8)
+
+
+##Not enough shelter (WP43) ------------------------------------------------------
+
+myanmar_desc_not_enough_shelter_plot<- gallup_myanmar %>%
+  filter(!is.na(WP43)) %>%
+  group_by(YEAR_INTERVIEW) %>%
+  summarize(prop=sum(WGT[WP43=="Yes"])/sum(WGT),prop_se=sqrt(prop*(1-prop)/sum(WGT))) %>%
+  mutate(prop_lowci=prop-1.96*prop_se, prop_upci=prop+1.96*prop_se) %>%
+  select(YEAR_INTERVIEW, prop, prop_lowci, prop_upci) %>%
+  #Plotting the data
+  ggplot(aes(x = YEAR_INTERVIEW, y = prop*100)) +
+  geom_point() + 
+  geom_errorbar(aes(ymin = prop_lowci*100, ymax = prop_upci*100), width = 0.15) +
+  scale_x_continuous(breaks = seq(2014, 2024, 1)) +
+  scale_y_continuous(limits = c(0, 100), expand = c(0, 0), breaks = seq(0, 100, 10)) +
+  theme_classic(base_size = 14) +
+  theme(
+    axis.ticks.x = element_line(color = 'black'),
+    axis.text.x = element_text(hjust = 0.5, color = 'black', size = 14), 
+    axis.text.y = element_text(hjust = 0.5, color = 'black', size = 14), 
+    axis.text.x.top = element_text(size = 14, face = 'bold'), 
+    plot.margin = unit(c(0.5, 1.2, -1, 0.3), 'lines'), 
+    panel.grid.major = element_blank(), 
+    panel.grid.minor = element_blank(),
+    legend.position = c(0.9, 0.13), 
+    axis.title = element_text(size = 14, face = 'bold'), 
+    legend.text = element_text(size = 12), 
+    legend.title = element_blank(), 
+    legend.background = element_blank(),
+    plot.title = element_text(size = 14, face = 'bold', hjust = 0.5)
+  ) +
+  labs(x = "Year", y = "Proportion of Respondents", 
+  title = "Not enough shelter at least one day in the past 12 months in Myanmar, 2014-2024\n") 
+
+ggsave("figures/myanmar_desc_not_enough_shelter_plot.png", myanmar_desc_not_enough_shelter_plot, width = 12, height = 8)
+
+
+##Life satisfaction and hope by regions (WP16 and WP18, REGION_MMR)--------------------------------
+
+unique(gallup_myanmar$REGION_MMR)
+
+myanmar_desc_LS_hope_by_regions_plot<-
+  gallup_myanmar %>%
+  filter(!is.na(WP16),!is.na(WGT), !is.na(WP18)) %>%
+  group_by(YEAR_INTERVIEW, REGION_MMR) %>%
+  summarize(LS_mean=Hmisc::wtd.mean(WP16, WGT, na.rm = TRUE),
+            LS_se=sqrt(Hmisc::wtd.var(WP16, WGT, na.rm = TRUE) / sum(WGT, na.rm = TRUE)),
+            Hope_mean=Hmisc::wtd.mean(WP18, WGT, na.rm = TRUE),
+            Hope_se=sqrt(Hmisc::wtd.var(WP18, WGT, na.rm = TRUE) / sum(WGT, na.rm = TRUE))) %>%
+  mutate(LS_lowci=LS_mean-1.96*LS_se, LS_upci=LS_mean+1.96*LS_se,
+         Hope_lowci=Hope_mean-1.96*Hope_se, Hope_upci=Hope_mean+1.96*Hope_se) %>%
+  pivot_longer(
+    cols = c(LS_mean, LS_lowci, LS_upci, Hope_mean, Hope_lowci, Hope_upci),
+    names_to = c("variable", "statistic"),
+    names_pattern = "(LS|Hope)_(mean|lowci|upci)",
+    values_to = "value"
+  ) %>%
+  pivot_wider(
+    names_from = statistic,
+    values_from = value
+  ) %>% 
+  select(YEAR_INTERVIEW, REGION_MMR, variable, mean, lowci, upci) %>% 
+  #Plotting the data
+  ggplot(aes(x = YEAR_INTERVIEW, y = mean, color = variable, group = variable)) +
+  geom_point() + 
+  geom_line() +
+  geom_errorbar(aes(ymin = lowci, ymax = upci), width = 0.15) +
+  scale_x_continuous(breaks = seq(2014, 2024, 1)) +
+  scale_y_continuous(limits = c(0, 10), expand = c(0, 0), breaks = seq(0, 10, 1)) +
+  theme_bw(base_size = 14) +
+  theme(
+    axis.ticks.x = element_line(color = 'black'),
+    axis.text.x = element_text(color = 'black', size = 14, angle = 45, hjust = 1), 
+    axis.text.y = element_text(hjust = 0.5, color = 'black', size = 14), 
+    axis.text.x.top = element_text(size = 14, face = 'bold'), 
+    plot.margin = unit(c(0.5, 1.2, 0.5, 0.3), 'lines'), 
+    panel.grid.major = element_blank(), 
+    panel.grid.minor = element_blank(),
+    legend.position = "none", 
+    axis.title = element_text(size = 14, face = 'bold'), 
+    legend.text = element_text(size = 14), 
+    legend.title = element_text(size = 14, face = 'bold'), 
+    plot.title = element_text(size = 14, face = 'bold', hjust = 0.5),
+    plot.caption = element_text(size = 14, hjust = 0, color = "gray50"),
+    panel.spacing = unit(1 , "lines") 
+  )+
+  facet_wrap(~REGION_MMR, nrow = 3)+
+  labs(x = "Year", y = "Life Satisfaction and Hope", 
+  title = "Life Satisfaction and Hope by Regions in Myanmar, 2014-2024\n") 
+
+ggsave("figures/myanmar_desc_LS_hope_by_regions_plot.png", myanmar_desc_LS_hope_by_regions_plot, width = 20, height =15)
+
+
+gallup_myanmar %>%
+  filter(!is.na(WP16)&!is.na(WGT)) %>%
+  group_by(YEAR_INTERVIEW, REGION_MMR) %>%
+  summarize(total_n=sum(WGT, na.rm = TRUE),
+            LS_mean=Hmisc::wtd.mean(WP16, WGT, na.rm = TRUE),
+            LS_se=sqrt(Hmisc::wtd.var(WP16, WGT, na.rm = TRUE) / sum(WGT, na.rm = TRUE))) %>%
+  mutate(LS_lowci=LS_mean-1.96*LS_se, LS_upci=LS_mean+1.96*LS_se) %>%
+  select(YEAR_INTERVIEW, REGION_MMR, total_n,LS_mean, LS_lowci, LS_upci) %>% 
+  filter(REGION_MMR %in% c("Chin State", "Kachin State", "Kayah State")) %>% 
+  arrange(REGION_MMR)
