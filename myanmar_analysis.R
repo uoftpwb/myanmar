@@ -140,7 +140,7 @@ gallup_myanmar %>% group_by(YEAR_INTERVIEW) %>% summarise(sum(WGT, na.rm = TRUE)
 
 saveRDS(gallup_myanmar, "data/GWP_myanmar_2014_2024.rds")
 gallup_myanmar <- readRDS("data/GWP_myanmar_2014_2024.rds") 
-
+nrow(gallup_myanmar) #11760
 
 #Creating the summary table for WP16 and WP18
 # Analysis ---------------------------------------------------------------------
@@ -173,7 +173,6 @@ SWB_myanmar_long <- SWB_myanmar %>%
     values_from = value
   )
 View(SWB_myanmar_long)
-
 
 #Plotting the data
 
@@ -277,7 +276,6 @@ Affective_myanmar_long <- Affective_myanmar %>%
                                variable == "stress" ~ "Stress",
                                variable == "anger" ~ "Anger")) %>%
   mutate(variable = factor(variable, levels = c("Smiling", "Enjoyment", "Worry", "Sadness", "Stress", "Anger")))
-
 
 myanmar_Affective_plot <-  Affective_myanmar_long %>% mutate(mean = mean * 100, lowci = lowci * 100, upci = upci * 100) %>%
   ggplot(aes(x = mid_date, y = mean, ymin = lowci, ymax = upci, color = variable, group = variable)) +
