@@ -15,22 +15,6 @@ for (pkg in p_list) {
 
 # Customised functions ---------------------------------------------------------
 
-## Create function to calculate confidence interval--------------------------------
-calculate_ci <- function(x, weights, conf.level = 0.95) {
-  x <- na.omit(x) # Remove NA values from the data vector
-  weights <- weights[!is.na(x)] # Align weights with the non-NA data values
-  nx <- length(x) # Calculate the number of non-NA observations
-  df <- nx - 1 # Calculate degrees of freedom
-  vx <- Hmisc::wtd.var(x, weights) # Calculate weighted variance without normalizing weights
-  mx <- stats::weighted.mean(x, weights) # Calculate the weighted mean of the data
-  stderr <- sqrt(vx/nx) # Calculate the standard error of the weighted mean
-  alpha <- 1 - conf.level # Calculate the alpha value (significance level) for the confidence interval
-  cint <- qt(1 - alpha/2, df) * stderr # Determine the critical t value for the CI, multiplied by standard error
-  lower_ci <- mx - cint # Calculate the lower bound of the confidence interval
-  upper_ci <- mx + cint # Calculate the upper bound of the confidence interval
-  return(data.frame(lower_ci = lower_ci, upper_ci = upper_ci)) # Return a data frame with lower and upper CI bounds
-}
-
 # Data -------------------------------------------------------------------------
 
 ## Load data ------------------------------------------------------------------
@@ -188,8 +172,7 @@ SWB_myanmar_long <- SWB_myanmar %>%
     names_from = statistic,
     values_from = value
   )
-
-print(SWB_myanmar_long, n = 100)
+View(SWB_myanmar_long)
 
 
 #Plotting the data
@@ -227,6 +210,8 @@ myanmar_SWB_plot <-  SWB_myanmar_long %>%
     plot.title = element_text(size = 14, face = 'bold', hjust = 0.5)
   ) +
   labs(x = "Year", y = "Mean Well-being Score (0-10)", title = "Mean Life Satisfaction and Hope in Myanmar, 2014-2024\n")
+
+myanmar_SWB_plot
 
 ggsave("figures/myanmar_SWB_plot.png", myanmar_SWB_plot, width = 12, height = 8)
 
@@ -324,6 +309,8 @@ myanmar_Affective_plot <-  Affective_myanmar_long %>% mutate(mean = mean * 100, 
     plot.title = element_text(size = 14, face = 'bold', hjust = 0.5)
   ) +
   labs(x = "Year", y = "Proportion of Respondents Feeling Each Affect", title = "Affective Well-being in Myanmar, 2014-2024\n")
+
+myanmar_Affective_plot
 
 ggsave("figures/myanmar_Affective_plot.png", myanmar_Affective_plot, width = 12, height = 8)
 
