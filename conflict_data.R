@@ -61,6 +61,12 @@ acled_mmr <- readRDS("data/acled/acled_mmr.rds")
 dim(acled_mmr)
 objects(acled_mmr)
 
+#Calculating the number of conflicts and death since the coup in 2021
+acled_mmr %>%
+  filter(year >= 2021) %>% 
+  summarise(n = n(), fatalities = sum(fatalities)) #
+
+
 ##DISORDER--------------------------
 
 ###Data visualization:Distribution of conflicts by year
@@ -257,6 +263,11 @@ uppsala_conflict_dataset_mmr <- uppsala_conflict_dataset_extract %>%
 
 nrow(uppsala_conflict_dataset_mmr) # 6212
 
+#Calculating the number of conflicts and death since the coup in 2021
+uppsala_conflict_dataset_mmr %>%
+  filter(year >= 2021) %>% 
+  summarise(n = n(), fatalities = sum(deaths_a, deaths_b, deaths_civilians, deaths_unknown))
+
 #Distribution of conflicts by year
 uppsala_conflict_dataset_mmr_disorder_plot <- uppsala_conflict_dataset_mmr %>%
   group_by(year) %>%
@@ -267,7 +278,7 @@ uppsala_conflict_dataset_mmr_disorder_plot <- uppsala_conflict_dataset_mmr %>%
   scale_x_continuous(limits = c(2013, 2025), expand = c(0, 0), breaks = seq(2013, 2025, 1)) +
   theme_classic() +
   labs(
-    title = "Number of conflicts in Myanmar by year (2014-2024)\n(Uppsala Conflict Research Program)",
+    title = "Number of conflicts in Myanmar by year (2014-2024)\n(Uppsala Conflict Data Program)",
     x = "Year",
     y = "Number of events",
     caption = "Note: Conflicts include state-based conflict, non-state conflict, one-sided violence. State-based and\nnon-state conflicts which resulted in at least 25 (battle-related) deaths in a year are included.\nOne-sided violence is defined as violence that resulted in at least 25 deaths."
@@ -304,7 +315,7 @@ uppsala_conflict_dataset_mmr_fatalities_plot <- uppsala_conflict_dataset_mmr %>%
   labs( 
     x = "Year",
     y = "Number of fatalities",
-    title = "Number of fatalities from recorded conflicts in Myanmar by year (2014-2024)\n(Uppsala Conflict Research Program)",
+    title = "Number of fatalities from recorded conflicts in Myanmar by year (2014-2024)\n(Uppsala Conflict Data Program)",
     caption = "Note: Conflicts include state-based conflict, non-state conflict, one-sided violence. State-based and\nnon-state conflicts which resulted in at least 25 (battle-related) deaths in a year are included.\nOne-sided violence is defined as violence that resulted in at least 25 deaths."
   ) +
   theme_classic(base_size = 14) +
@@ -347,7 +358,7 @@ uppsala_conflict_dataset_mmr_disorder_region_plot <- uppsala_conflict_dataset_mm
   facet_wrap(~ adm_1, ncol = 3, nrow = 6) +
   theme_light() +
   labs(
-    title = "Distribution of conflicts in Myanmar by region and year (2014-2024)\n(Uppsala Conflict Research Program)",
+    title = "Distribution of conflicts in Myanmar by region and year (2014-2024)\n(Uppsala Conflict Data Program)",
     x = "\nYear\n",
     y = "\nNumber of events\n",
     caption = " Note: Conflicts include state-based conflict, non-state conflict, one-sided violence. State-based and non-state conflicts which resulted in at\nleast 25 (battle-related) deaths in a year are included. One-sided violence is defined as violence that resulted in at least 25 deaths. The\ndotted line represents the year 2021, when the military coup d'état occurred."
@@ -390,7 +401,7 @@ uppsala_conflict_dataset_mmr_fatalities_region_plot <- uppsala_conflict_dataset_
   facet_wrap(~ adm_1, ncol = 3, nrow = 6) +
   theme_light() +
   labs(
-    title = "Distribution of fatalities in Myanmar by region and year (2014-2024)\n(Uppsala Conflict Research Program)",
+    title = "Distribution of fatalities in Myanmar by region and year (2014-2024)\n(Uppsala Conflict Data Program)",
     x = "\nYear\n",
     y = "\nNumber of fatalities\n",
     caption = "Note: Conflicts include state-based conflict, non-state conflict, one-sided violence. State-based and non-state conflicts which resulted in at\nleast 25 (battle-related) deaths in a year are included. One-sided violence is defined as violence that resulted in at least 25 deaths. The\ndotted line represents the year 2021, when the military coup d'état occurred."
@@ -417,46 +428,3 @@ uppsala_conflict_dataset_mmr_fatalities_region_plot <- uppsala_conflict_dataset_
 uppsala_conflict_dataset_mmr_fatalities_region_plot 
 
 ggsave("figures/uppsala_conflict_dataset_mmr_fatalities_region_plot.png", uppsala_conflict_dataset_mmr_fatalities_region_plot, width = 16, height = 20)
-
-
-uppsala_conflict_dataset_mmr %>%
-  filter(year==2017) %>%
-  mutate(total_deaths = deaths_a + deaths_b + deaths_civilians + deaths_unknown) %>%
-  select(dyad_name, total_deaths) %>% arrange(desc(total_deaths)) %>% print(n=100)
-
-objects(uppsala_conflict_dataset_mmr)
-
-unique(uppsala_conflict_dataset_mmr$adm_1)
-
-
-unique(acled_mmr$admin1)
-
-
-States
-"Chin State", "Kachin State", "Kayah State", "Kayin State", "Mon State", "Rakhine State", "Shan State" 
-"Ayeyarwady Region", "Bago Region", "Magway Region", "Mandalay Region", "Sagaing Region", "Tanintharyi Region"
-"Yangon Region" 
-"Naypyidaw Union Territory" 
-
-# Standardize region names for ACLED data
-acled_mmr <- acled_mmr %>%
-  mutate(admin1_standard = case_when(
-    admin1 == "Chin State" ~ "Chin State",
-    admin1 == "Kachin State" ~ "Kachin State", 
-    admin1 == "Kayah State" ~ "Kayah State",
-    admin1 == "Kayin State" ~ "Kayin State",
-    admin1 == "Mon State" ~ "Mon State",
-    admin1 == "Rakhine State" ~ "Rakhine State",
-    admin1 == "Shan State" ~ "Shan State",
-    admin1 == "Ayeyarwady Region" ~ "Ayeyarwady Region",
-    admin1 == "Bago Region" ~ "Bago Region",
-    admin1 == "Magway Region" ~ "Magway Region",
-    admin1 == "Mandalay Region" ~ "Mandalay Region",
-    admin1 == "Sagaing Region" ~ "Sagaing Region",
-    admin1 == "Tanintharyi Region" ~ "Tanintharyi Region",
-    admin1 == "Yangon Region" ~ "Yangon Region",
-    admin1 == "Naypyidaw Union Territory" ~ "Naypyidaw Union Territory",
-    TRUE ~ admin1
-  ))
-
-

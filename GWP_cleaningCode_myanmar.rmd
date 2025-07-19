@@ -54,7 +54,7 @@ Once we had the subset of the Gallup data, we imported the data and loaded the n
 library(dplyr)
 
 # Read the RDS file
-gallupSubset <- readRDS("data/(250618)GWP_RawSubset_MyanmarProject.rds")
+gallupSubset <- readRDS("data/(250717)GWP_RawSubset_MyanmarProject.rds")
 ```
 
 
@@ -78,6 +78,8 @@ Gallup coded some responses as 'Don't Know' or 'Refused', which would not be mea
 ```{r converting-responses-to-NA}
 
 # Convert certain values to NA
+objects(gallup)
+
 gallup <- gallup %>%
   mutate(
          WP10251 = ifelse(WP10251 %in% c(3, 4), NA, WP10251),
@@ -91,6 +93,7 @@ gallup <- gallup %>%
          WP1220 = ifelse(WP1220 %in% c(100), NA, WP1220),
          WP1223 = ifelse(WP1223 %in% c(6, 7), NA, WP1223),
          WP1233 = ifelse(WP1233 %in% c(98, 99, 97), NA, WP1233),
+         WP1233RECODED = ifelse(WP1233RECODED %in% c(98, 99), NA, WP1233RECODED),
          WP13125 = ifelse(WP13125 %in% c(3, 4), NA, WP13125),
          WP1325 = ifelse(WP1325 %in% c(3, 4), NA, WP1325),
          WP134 = ifelse(WP134 %in% c(3, 4), NA, WP134),
@@ -104,6 +107,9 @@ gallup <- gallup %>%
          WP150 = ifelse(WP150 %in% c(3, 4), NA, WP150),
          WP16 = ifelse(WP16 %in% c(98, 99), NA, WP16),
          WP18 = ifelse(WP18 %in% c(98, 99), NA, WP18),
+         WP30 = ifelse(WP30 %in% c(3, 4), NA, WP30),
+         WP31 = ifelse(WP31 %in% c(4, 5), NA, WP31),
+         WP3120 = ifelse(WP3120 %in% c(997, 998, 999), NA, WP3120),
          WP3117 = ifelse(WP3117 %in% c(4, 5), NA, WP3117),
 
          WP40 = ifelse(WP40 %in% c(3, 4), NA, WP40),
@@ -140,6 +146,7 @@ gallup <- gallup %>%
     WP145 = ifelse(WP145 == 2, 0, WP145),
     WP146 = ifelse(WP146 == 2, 0, WP146),
     WP150 = ifelse(WP150 == 2, 0, WP150),
+    WP30 = ifelse(WP30 == 2, 0, WP30),
     WP40 = ifelse(WP40 == 2, 0, WP40),
     WP43 = ifelse(WP43 == 2, 0, WP43),
     WP63 = ifelse(WP63 == 2, 0, WP63),
@@ -164,7 +171,7 @@ The object `gallup` is now a cleaned subset of the Gallup data.
 We save the Gallup cleaned data to a .rds file for later use
 
 ```{r exporting-gallup-cleaned}
-saveRDS(gallup, "data/(250701)GWP_cleaned_MyanmarProject.rds")
+saveRDS(gallup, "data/(250717)GWP_cleaned_MyanmarProject.rds")
 ```
 
 
