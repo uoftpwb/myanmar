@@ -155,6 +155,7 @@ gallup_myanmar <- gallup_world %>%
 nrow(gallup_myanmar) #11760
 
 saveRDS(gallup_myanmar, "data/GWP_myanmar_2014_2024.rds")
+
 gallup_myanmar <- readRDS("data/GWP_myanmar_2014_2024.rds") 
 nrow(gallup_myanmar) #11760
 
@@ -405,7 +406,14 @@ myanmar_desc_not_enough_food_shelter_plot
 
 ggsave("figures/myanmar_desc_not_enough_food_shelter_plot.png", myanmar_desc_not_enough_food_shelter_plot, width = 12, height = 7)
 
-
+#Mean over time of not enough food and shelter
+gallup_myanmar %>%
+  filter(!is.na(WP40) & !is.na(WP43) & !is.na(WGT)) %>%
+  group_by(YEAR_SINCE_COUP) %>%  
+  summarize(food_mean=sum(WGT[WP40=="Yes"])/sum(WGT),food_se=sqrt(food_mean*(1-food_mean)/sum(WGT)),
+            shelter_mean=sum(WGT[WP43=="Yes"])/sum(WGT),shelter_se=sqrt(shelter_mean*(1-shelter_mean)/sum(WGT))) %>%
+  mutate(food_mean=food_mean*100, food_se=food_se*100,
+         shelter_mean=shelter_mean*100, shelter_se=shelter_se*100) 
 ##Living standard (WP30) ------------------------------------------------------
 
 myanmar_desc_living_standard_plot<- gallup_myanmar %>%
@@ -448,46 +456,54 @@ myanmar_desc_living_standard_plot
 
 ggsave("figures/myanmar_desc_living_standard_plot.png", myanmar_desc_living_standard_plot, width = 12, height = 7)
 
+#Mean over time of living standard
+gallup_myanmar %>%
+  filter(!is.na(WP30)&!is.na(WGT)) %>%
+  group_by(YEAR_INTERVIEW) %>%  
+  #filter(YEAR_INTERVIEW > 2021) %>%  
+  summarize(mean=sum(WGT[WP30=="Dissatisfied"])/sum(WGT),se=sqrt(mean*(1-mean)/sum(WGT))) %>%
+  mutate(mean=mean*100, se=se*100) 
+
 
 ##Benevolence of People --------------------------------------------------------
 
 ###Donating Money (WP108), Volunteering (WP109), Helping Strangers (WP110) ------------------------------------------------------
 
-myanmar_desc_benevolence_plot<- gallup_myanmar %>%
-  filter(!is.na(WP108) & !is.na(WP109) & !is.na(WP110) & !is.na(WGT)) %>%
-  group_by(mid_date) %>%
-  summarise(
-    donating_money_mean = stats::weighted.mean(WP108, WGT, na.rm = TRUE),
-    donating_money_se = sqrt(donating_money_mean*(1-donating_money_mean)/sum(WGT, na.rm = TRUE)),
-    volunteering_mean = stats::weighted.mean(WP109, WGT, na.rm = TRUE),
-    volunteering_se = sqrt(volunteering_mean*(1-volunteering_mean)/sum(WGT, na.rm = TRUE)),
-    helping_others_mean = stats::weighted.mean(WP110, WGT, na.rm = TRUE),
-    helping_others_se = sqrt(helping_others_mean*(1-helping_others_mean)/sum(WGT, na.rm = TRUE))
-  ) %>%
-  mutate(donating_money_lowci = donating_money_mean - 1.96 * donating_money_se,
-         donating_money_upci = donating_money_mean + 1.96 * donating_money_se,
-         volunteering_lowci = volunteering_mean - 1.96 * volunteering_se,
-         volunteering_upci = volunteering_mean + 1.96 * volunteering_se,
-         helping_others_lowci = helping_others_mean - 1.96 * helping_others_se,
-         helping_others_upci = helping_others_mean + 1.96 * helping_others_se) %>%
-  select(mid_date, donating_money_mean, donating_money_lowci, donating_money_upci, volunteering_mean, 
-  volunteering_lowci, volunteering_upci, helping_others_mean, helping_others_lowci, helping_others_upci) %>%
-  #Plotting all three variables on the same plot
-  pivot_longer(
-    cols = c(donating_money_mean, donating_money_lowci, donating_money_upci, 
-      volunteering_mean, volunteering_lowci, volunteering_upci, 
-      helping_others_mean, helping_others_lowci, helping_others_upci),
-    names_to = c("variable", "statistic"),
-    names_pattern = "(donating_money|volunteering|helping_others)_(mean|lowci|upci)",
-    values_to = "value"
-  ) %>% pivot_wider(
-    names_from = statistic,
-    values_from = value
-  ) %>% 
-  mutate (variable = case_when(variable == "donating_money" ~ "Donating Money",
-                               variable == "volunteering" ~ "Volunteering",
-                               variable == "helping_others" ~ "Helping Strangers")) %>%
-  mutate(variable = factor(variable, labels = c("Donating Money", "Volunteering", "Helping Strangers"))) %>%
+  myanmar_desc_benevolence_plot<- gallup_myanmar %>%
+    filter(!is.na(WP108) & !is.na(WP109) & !is.na(WP110) & !is.na(WGT)) %>%
+    group_by(mid_date) %>%
+    summarise(
+      WP108_mean = stats::weighted.mean(WP108, WGT, na.rm = TRUE),
+      WP108_se = sqrt(WP108_mean*(1-WP108_mean)/sum(WGT, na.rm = TRUE)),
+      WP109_mean = stats::weighted.mean(WP109, WGT, na.rm = TRUE),
+      WP109_se = sqrt(WP109_mean*(1-WP109_mean)/sum(WGT, na.rm = TRUE)),
+      WP110_mean = stats::weighted.mean(WP110, WGT, na.rm = TRUE),
+      WP110_se = sqrt(WP110_mean*(1-WP110_mean)/sum(WGT, na.rm = TRUE))
+    ) %>%
+    mutate(WP108_lowci = WP108_mean - 1.96 * WP108_se,
+          WP108_upci = WP108_mean + 1.96 * WP108_se,
+          WP109_lowci = WP109_mean - 1.96 * WP109_se,
+          WP109_upci = WP109_mean + 1.96 * WP109_se,
+          WP110_lowci = WP110_mean - 1.96 * WP110_se,
+          WP110_upci = WP110_mean + 1.96 * WP110_se) %>%
+    select(mid_date, WP108_mean, WP108_lowci, WP108_upci, WP109_mean, 
+    WP109_lowci, WP109_upci, WP110_mean, WP110_lowci, WP110_upci) %>%
+    #Plotting all three variables on the same plot
+    pivot_longer(
+      cols = c(WP108_mean, WP108_lowci, WP108_upci, 
+        WP109_mean, WP109_lowci, WP109_upci, 
+        WP110_mean, WP110_lowci, WP110_upci),
+      names_to = c("variable", "statistic"),
+      names_pattern = "(WP108|WP109|WP110)_(mean|lowci|upci)",
+      values_to = "value"
+    ) %>% pivot_wider(
+      names_from = statistic,
+      values_from = value
+    ) %>% 
+    mutate (variable = case_when(variable == "WP108" ~ "Donating Money",
+                                variable == "WP109" ~ "Volunteering",
+                                variable == "WP110" ~ "Helping Others")) %>%
+  mutate(variable = factor(variable, levels = c("Donating Money", "Helping Others", "Volunteering"))) %>%
   ggplot(aes(x = mid_date, y = mean*100, ymin = lowci*100, ymax = upci*100, color = variable, group = variable)) +
   geom_vline(xintercept = as.Date("2015-11-08"), linetype = "dotted", color = "black") +
   annotate("text", x = as.Date("2016-01-08"), y = 90, label = "Myanmar General Elections on November 8th, 2015\nThe National League for Democracy won a supermajority.", vjust = -0.5, hjust = 0, size = 4, fontface = "bold") +
@@ -498,8 +514,8 @@ myanmar_desc_benevolence_plot<- gallup_myanmar %>%
   geom_ribbon(alpha = 0.2, aes(ymin = lowci*100, ymax = upci*100, fill = variable), size=0) +
   scale_x_date(date_breaks = "1 year", date_labels = "%Y", limits = as.Date(c("2014-01-01", "2024-12-31"))) +
   scale_y_continuous(limits = c(0, 100), expand = c(0, 0), breaks = seq(0, 100, 10)) +
-  scale_color_manual(values = c("#ee9b00", "#005f73", "#9a031e"), labels = c("Donating Money", "Volunteering", "Helping Strangers"), name = "") +
-  scale_fill_manual(values = c("#ee9b00", "#005f73", "#9a031e"), labels = c("Donating Money", "Volunteering", "Helping Strangers"), name = "") +
+  scale_color_manual(values = c("#ee9b00", "#9a031e", "#005f73"), labels = c("Donating Money", "Helping Others", "Volunteering"), name = "") +
+  scale_fill_manual(values = c("#ee9b00", "#9a031e", "#005f73"), labels = c("Donating Money", "Helping Others", "Volunteering"), name = "") +
   theme_classic(base_size = 14) +
   theme(
     axis.ticks.x = element_line(color = 'black'),
@@ -524,27 +540,48 @@ myanmar_desc_benevolence_plot
 ggsave("figures/myanmar_desc_benevolence_plot.png", myanmar_desc_benevolence_plot, width = 12, height = 7)
 
 
+#Mean over time of donating money, volunteering, and helping strangers
+gallup_myanmar %>%
+  filter(!is.na(WP108) & !is.na(WP109) & !is.na(WP110) & !is.na(WGT)) %>%
+
+#  group_by(YEAR_SINCE_COUP) %>%
+filter(mid_date > as.Date("2021-02-01")) %>%
+  summarise(
+    donating_money_mean = stats::weighted.mean(WP108, WGT, na.rm = TRUE),
+    donating_money_se = sqrt(donating_money_mean*(1-donating_money_mean)/sum(WGT, na.rm = TRUE)),
+    volunteering_mean = stats::weighted.mean(WP109, WGT, na.rm = TRUE),
+    volunteering_se = sqrt(volunteering_mean*(1-volunteering_mean)/sum(WGT, na.rm = TRUE)),
+    helping_others_mean = stats::weighted.mean(WP110, WGT, na.rm = TRUE),
+    helping_others_se = sqrt(helping_others_mean*(1-helping_others_mean)/sum(WGT, na.rm = TRUE))
+  ) %>%
+  mutate(donating_money_mean=donating_money_mean*100, donating_money_se=donating_money_se*100,
+         volunteering_mean=volunteering_mean*100, volunteering_se=volunteering_se*100,
+         helping_others_mean=helping_others_mean*100, helping_others_se=helping_others_se*100) %>%
+  select( donating_money_mean, volunteering_mean, helping_others_mean)
+
 
 ##Confidence in national institutions ------------------------------------------
 
-###Confidence in judicial system (WP138), national government (WP139), honesty of election (WP144) ------------------------------------------------------
+###Confidence in judicial system (WP138), national government (WP139), honesty of election (WP144), head of state (WP150) ------------------------------------------------------
 
 
 myanmar_desc_confidence_in_institutions_plot<- gallup_myanmar %>%
-  filter(!is.na(WP138) & !is.na(WP139) & !is.na(WP144)) %>%
+  filter(!is.na(WP138) & !is.na(WP139) & !is.na(WP144) & !is.na(WP150)) %>%
   group_by(mid_date) %>%
   summarize(WP138_mean=sum(WGT[WP138=="Yes"])/sum(WGT, na.rm = TRUE), WP138_se=sqrt(WP138_mean*(1-WP138_mean)/sum(WGT, na.rm = TRUE)),
-            WP139_mean=sum(WGT[WP139=="Yes"])/sum(WGT, na.rm = TRUE), WP139_se=sqrt(WP139_mean*(1-WP139_mean)/sum(WGT, na.rm = TRUE)),
-            WP144_mean=sum(WGT[WP144=="Yes"])/sum(WGT, na.rm = TRUE), WP144_se=sqrt(WP144_mean*(1-WP144_mean)/sum(WGT, na.rm = TRUE))) %>%
+           WP139_mean=sum(WGT[WP139=="Yes"])/sum(WGT, na.rm = TRUE), WP139_se=sqrt(WP139_mean*(1-WP139_mean)/sum(WGT, na.rm = TRUE)),
+            WP144_mean=sum(WGT[WP144=="Yes"])/sum(WGT, na.rm = TRUE), WP144_se=sqrt(WP144_mean*(1-WP144_mean)/sum(WGT, na.rm = TRUE)),
+            WP150_mean=sum(WGT[WP150=="Approved"])/sum(WGT, na.rm = TRUE), WP150_se=sqrt(WP150_mean*(1-WP150_mean)/sum(WGT, na.rm = TRUE))) %>%
   mutate(WP138_lowci=WP138_mean-1.96*WP138_se, WP138_upci=WP138_mean+1.96*WP138_se,
          WP139_lowci=WP139_mean-1.96*WP139_se, WP139_upci=WP139_mean+1.96*WP139_se,
-         WP144_lowci=WP144_mean-1.96*WP144_se, WP144_upci=WP144_mean+1.96*WP144_se) %>%
-  select(mid_date, WP138_mean, WP138_lowci, WP138_upci, WP139_mean, WP139_lowci, WP139_upci, WP144_mean, WP144_lowci, WP144_upci) %>%
+         WP144_lowci=WP144_mean-1.96*WP144_se, WP144_upci=WP144_mean+1.96*WP144_se,
+         WP150_lowci=WP150_mean-1.96*WP150_se, WP150_upci=WP150_mean+1.96*WP150_se) %>%
+  select(mid_date, WP138_mean, WP138_lowci, WP138_upci, WP139_mean, WP139_lowci, WP139_upci, WP144_mean, WP144_lowci, WP144_upci, WP150_mean, WP150_lowci, WP150_upci) %>%
   #Pivoting to long format for plotting
   pivot_longer(
-    cols = c(WP138_mean, WP138_lowci, WP138_upci, WP139_mean, WP139_lowci, WP139_upci, WP144_mean, WP144_lowci, WP144_upci),
+    cols = c(WP138_mean, WP138_lowci, WP138_upci, WP139_mean, WP139_lowci, WP139_upci, WP144_mean, WP144_lowci, WP144_upci, WP150_mean, WP150_lowci, WP150_upci),
     names_to = c("variable", "statistic"),
-    names_pattern = "(WP138|WP139|WP144)_(mean|lowci|upci)",
+    names_pattern = "(WP138|WP139|WP144|WP150)_(mean|lowci|upci)",
     values_to = "value"
   ) %>%
   pivot_wider(
@@ -553,8 +590,9 @@ myanmar_desc_confidence_in_institutions_plot<- gallup_myanmar %>%
   ) %>%
   mutate(variable = case_when(variable == "WP138" ~ "Judicial System",
                               variable == "WP139" ~ "National Government", 
-                              variable == "WP144" ~ "Honesty of Election")) %>%
-  mutate(variable = factor(variable, levels = c("Judicial System", "National Government", "Honesty of Election"))) %>%
+                              variable == "WP144" ~ "Honesty of Election",
+                              variable == "WP150" ~ "Head of State")) %>%
+  mutate(variable = factor(variable, levels = c("Judicial System", "National Government", "Honesty of Election", "Head of State")))%>%
   #Plotting the data
   ggplot(aes(x = mid_date, y = mean*100, ymin = lowci*100, ymax = upci*100, color = variable, group = variable)) +
   geom_vline(xintercept = as.Date("2015-11-08"), linetype = "dotted", color = "black") +
@@ -566,8 +604,8 @@ myanmar_desc_confidence_in_institutions_plot<- gallup_myanmar %>%
   geom_ribbon(alpha = 0.2, aes(fill = variable), size=0) +
   scale_x_date(date_breaks = "1 year", date_labels = "%Y", limits = as.Date(c("2014-01-01", "2024-12-31"))) +
   scale_y_continuous(limits = c(0, 100), expand = c(0, 0), breaks = seq(0, 100, 10)) +
-  scale_color_manual(values = c("#e76f51", "#2a9d8f", "#264653"), labels = c("Judicial System", "National Government", "Honesty of Election"), name = "") +
-  scale_fill_manual(values = c("#e76f51", "#2a9d8f", "#264653"), labels = c("Judicial System", "National Government", "Honesty of Election"), name = "") +
+  scale_color_manual(values = c("#e76f51", "#2a9d8f", "#264653", "#ffb703"), labels = c("Judicial System", "National Government", "Honesty of Election", "Head of State"), name = "") +
+  scale_fill_manual(values = c("#e76f51", "#2a9d8f", "#264653", "#ffb703"), labels = c("Judicial System", "National Government", "Honesty of Election", "Head of State"), name = "") +
   theme_classic(base_size = 14) +
   theme(
     axis.ticks.x = element_line(color = 'black'),
@@ -591,49 +629,63 @@ myanmar_desc_confidence_in_institutions_plot
 
 ggsave("figures/myanmar_desc_confidence_in_institutions_plot.png", myanmar_desc_confidence_in_institutions_plot, width = 12, height = 7)
 
+#Mean over time of confidence in judicial system, national government, and honesty of election,
+gallup_myanmar %>%
+  filter(!is.na(WP138) & !is.na(WP139) & !is.na(WP144) & !is.na(WP150) & !is.na(WGT)) %>%
+  #group_by(YEAR_INTERVIEW) %>%  
+  group_by(YEAR_SINCE_COUP) %>%
+  summarize(WP138_mean=sum(WGT[WP138=="Yes"])/sum(WGT),WP138_se=sqrt(WP138_mean*(1-WP138_mean)/sum(WGT)),
+            WP139_mean=sum(WGT[WP139=="Yes"])/sum(WGT),WP139_se=sqrt(WP139_mean*(1-WP139_mean)/sum(WGT)),
+            WP144_mean=sum(WGT[WP144=="Yes"])/sum(WGT),WP144_se=sqrt(WP144_mean*(1-WP144_mean)/sum(WGT)),
+            WP150_mean=sum(WGT[WP150=="Approved"])/sum(WGT),WP150_se=sqrt(WP150_mean*(1-WP150_mean)/sum(WGT))) %>%
+  mutate(WP138_mean=WP138_mean*100, WP138_se=WP138_se*100,
+         WP139_mean=WP139_mean*100, WP139_se=WP139_se*100,
+         WP144_mean=WP144_mean*100, WP144_se=WP144_se*100,
+         WP150_mean=WP150_mean*100, WP150_se=WP150_se*100) %>%
+  #select(YEAR_SINCE_COUP, WP138_mean, WP138_se, WP139_mean, WP139_se, WP144_mean, WP144_se, WP150_mean, WP150_se) %>%
+  select(YEAR_SINCE_COUP, WP138_mean, WP139_mean, WP144_mean, WP150_mean,) 
 
 
 ### Approval of job performance of head of state (WP150) ------------------------------------------------------
+# myanmar_desc_approval_of_head_of_state_plot<- gallup_myanmar %>%
+#   filter(!is.na(WP150) & !is.na(WGT)) %>%
+#   group_by(mid_date) %>%
+#   summarize(mean=sum(WGT[WP150=="Approved"])/sum(WGT),se=sqrt(mean*(1-mean)/sum(WGT))) %>%
+#   mutate(lowci=mean-1.96*se, upci=mean+1.96*se) %>%
+#   select(mid_date, mean, lowci, upci) %>%
+#   #Plotting the data
+#   ggplot(aes(x = mid_date, y = mean*100)) +
+#   geom_vline(xintercept = as.Date("2015-11-08"), linetype = "dotted", color = "black") +
+#   annotate("text", x = as.Date("2016-01-08"), y = 5, label = "Myanmar General Elections on November 8th, 2015\nThe National League for Democracy won a supermajority.", vjust = -0.5, hjust = 0, size = 4, fontface = "bold") +
+#   geom_vline(xintercept = as.Date("2021-02-01"), linetype = "dotted", color = "black") +
+#   annotate("text", x = as.Date("2021-04-01"), y = 5, label = "The military launched the coup d'état\non February 1st, 2021", vjust = -0.5, hjust = 0, size = 4, fontface = "bold") +
+#   geom_point(size = 2, color = "#3d348b") + 
+#   geom_line(size = 1, color = "#3d348b") +
+#   geom_ribbon(aes(ymin = lowci*100, ymax = upci*100), alpha = 0.2, fill = "#3d348b") +
+#   scale_x_date(date_breaks = "1 year", date_labels = "%Y", limits = as.Date(c("2014-01-01", "2024-12-31"))) +
+#   scale_y_continuous(limits = c(0, 100), expand = c(0, 0), breaks = seq(0, 100, 10)) +
+#   theme_classic(base_size = 14) +
+#   theme(
+#     axis.ticks.x = element_line(color = 'black'),
+#     axis.text.x = element_text(hjust = 0.5, color = 'black', size = 14), 
+#     axis.text.y = element_text(hjust = 0.5, color = 'black', size = 14), 
+#     axis.text.x.top = element_text(size = 14, face = 'bold'), 
+#     plot.margin = unit(c(0.5, 1.2, -1, 0.3), 'lines'), 
+#     panel.grid.major = element_blank(), 
+#     panel.grid.minor = element_blank(),
+#     legend.position = c(0.9, 0.1), 
+#     axis.title = element_text(size = 14, face = 'bold'), 
+#     legend.text = element_text(size = 12), 
+#     legend.title = element_blank(), 
+#     legend.background = element_blank(),
+#     plot.title = element_text(size = 14, face = 'bold', hjust = 0.5)
+#   ) +
+#   labs(x = "Year", y = "Proportion of Respondents", 
+#   title = "Approving Job Performance of country leadership in Myanmar, 2014-2024\n") 
 
-myanmar_desc_approval_of_head_of_state_plot<- gallup_myanmar %>%
-  filter(!is.na(WP150) & !is.na(WGT)) %>%
-  group_by(mid_date) %>%
-  summarize(mean=sum(WGT[WP150=="Approved"])/sum(WGT),se=sqrt(mean*(1-mean)/sum(WGT))) %>%
-  mutate(lowci=mean-1.96*se, upci=mean+1.96*se) %>%
-  select(mid_date, mean, lowci, upci) %>%
-  #Plotting the data
-  ggplot(aes(x = mid_date, y = mean*100)) +
-  geom_vline(xintercept = as.Date("2015-11-08"), linetype = "dotted", color = "black") +
-  annotate("text", x = as.Date("2016-01-08"), y = 5, label = "Myanmar General Elections on November 8th, 2015\nThe National League for Democracy won a supermajority.", vjust = -0.5, hjust = 0, size = 4, fontface = "bold") +
-  geom_vline(xintercept = as.Date("2021-02-01"), linetype = "dotted", color = "black") +
-  annotate("text", x = as.Date("2021-04-01"), y = 5, label = "The military launched the coup d'état\non February 1st, 2021", vjust = -0.5, hjust = 0, size = 4, fontface = "bold") +
-  geom_point(size = 2, color = "#3d348b") + 
-  geom_line(size = 1, color = "#3d348b") +
-  geom_ribbon(aes(ymin = lowci*100, ymax = upci*100), alpha = 0.2, fill = "#3d348b") +
-  scale_x_date(date_breaks = "1 year", date_labels = "%Y", limits = as.Date(c("2014-01-01", "2024-12-31"))) +
-  scale_y_continuous(limits = c(0, 100), expand = c(0, 0), breaks = seq(0, 100, 10)) +
-  theme_classic(base_size = 14) +
-  theme(
-    axis.ticks.x = element_line(color = 'black'),
-    axis.text.x = element_text(hjust = 0.5, color = 'black', size = 14), 
-    axis.text.y = element_text(hjust = 0.5, color = 'black', size = 14), 
-    axis.text.x.top = element_text(size = 14, face = 'bold'), 
-    plot.margin = unit(c(0.5, 1.2, -1, 0.3), 'lines'), 
-    panel.grid.major = element_blank(), 
-    panel.grid.minor = element_blank(),
-    legend.position = c(0.9, 0.1), 
-    axis.title = element_text(size = 14, face = 'bold'), 
-    legend.text = element_text(size = 12), 
-    legend.title = element_blank(), 
-    legend.background = element_blank(),
-    plot.title = element_text(size = 14, face = 'bold', hjust = 0.5)
-  ) +
-  labs(x = "Year", y = "Proportion of Respondents", 
-  title = "Approving Job Performance of country leadership in Myanmar, 2014-2024\n") 
+# myanmar_desc_approval_of_head_of_state_plot
 
-myanmar_desc_approval_of_head_of_state_plot
-
-ggsave("figures/myanmar_desc_approval_of_head_of_state_plot.png", myanmar_desc_approval_of_head_of_state_plot, width = 12, height = 8)
+# ggsave("figures/myanmar_desc_approval_of_head_of_state_plot.png", myanmar_desc_approval_of_head_of_state_plot, width = 12, height = 8)
 
 ### Perception of corruption in government (WP146) ------------------------------------------------------
 
@@ -680,6 +732,13 @@ myanmar_desc_corruption_plot
 ggsave("figures/myanmar_desc_corruption_plot.png", myanmar_desc_corruption_plot, width = 12, height = 8)
 
 
+#Mean of corruption over time
+gallup_myanmar %>%
+  filter(!is.na(WP146) & !is.na(WGT)) %>%
+  group_by(YEAR_SINCE_COUP) %>%
+  summarize(mean=sum(WGT[WP146=="Yes"])/sum(WGT),se=sqrt(mean*(1-mean)/sum(WGT))) %>%
+  mutate(mean=mean*100, se=se*100) 
+
 ### Satisfaction with freedom (WP134) ------------------------------------------------------
 
 gallup_myanmar$WP134
@@ -723,6 +782,14 @@ myanmar_desc_satisfaction_with_freedom_plot<- gallup_myanmar %>%
 myanmar_desc_satisfaction_with_freedom_plot
 
 ggsave("figures/myanmar_desc_satisfaction_with_freedom_plot.png", myanmar_desc_satisfaction_with_freedom_plot, width = 12, height = 8)
+
+#Mean of satisfaction with freedom over time
+gallup_myanmar %>%
+  filter(!is.na(WP134) & !is.na(WGT)) %>%
+  group_by(YEAR_SINCE_COUP) %>%
+  #filter(mid_date < as.Date("2021-02-01")) %>%
+  summarize(mean=sum(WGT[WP134=="Satisfied"])/sum(WGT),se=sqrt(mean*(1-mean)/sum(WGT))) %>%
+  mutate(mean=mean*100, se=se*100) 
 
 ### Would like to live in a different country (WP1325) ------------------------------------------------------
 
@@ -772,6 +839,13 @@ myanmar_desc_different_country_plot
 
 ggsave("figures/myanmar_desc_different_country_plot.png", myanmar_desc_different_country_plot, width = 12, height = 8)
 
+
+#Mean of would like to live in a different country over time
+gallup_myanmar %>%
+  filter(!is.na(WP1325) & !is.na(WGT)) %>%
+  group_by(YEAR_SINCE_COUP) %>%
+  summarize(mean=sum(WGT[WP1325==1])/sum(WGT),se=sqrt(mean*(1-mean)/sum(WGT))) %>%
+  mutate(mean=mean*100, se=se*100) 
 
 ### Distribution of religions (WP1233) in 2014 ----------------------------------
 #Get the weighted distribution of religions in 2014

@@ -4,7 +4,7 @@
 # Description: This script extracts conflict data from a database and analyzes it.
 
 # Load the necessary libraries
-p_list <- c("tidyverse", "readxl", "lubridate", "tidytext", "tidyquant", "httr", "jsonlite", "dplyr", "lubridate")
+p_list <- c("tidyverse", "readxl", "lubridate", "tidytext", "tidyquant", "httr", "jsonlite", "dplyr", "lubridate", "styler")
 
 # Check if packages are installed, install if needed, then load
 for (pkg in p_list) {
@@ -14,22 +14,27 @@ for (pkg in p_list) {
   library(pkg, character.only = TRUE)
 }
 
-#From all the regional ACLED data from the data folder
+# Style the code
+style_file("Testing.R")
+
+# From all the regional ACLED data from the data folder
 acled_asia_pacific <- read.csv("data/acled/Asia-Pacific_2018-2025_Jul04.csv")
 dim(acled_asia_pacific)
 objects(acled_asia_pacific)
 
-#Extracting relevant columns
-acled_asia_pacific_extract <- 
+# Extracting relevant columns
+acled_asia_pacific_extract <-
   acled_asia_pacific %>%
   filter(year >= 2014 & year <= 2024) %>%
-  select(event_id_cnty, event_date, year, disorder_type, event_type, actor1, actor2, 
-  iso, country, admin1, admin2, admin3, location, fatalities) %>%
-  mutate(event_date = as.Date(event_date)) 
+  select(
+    event_id_cnty, event_date, year, disorder_type, event_type, actor1, actor2,
+    iso, country, admin1, admin2, admin3, location, fatalities
+  ) %>%
+  mutate(event_date = as.Date(event_date))
 
-#Filtering for Myanmar and only conflicts
-acled_mmr<-acled_asia_pacific_extract %>% 
-  filter(country == "Myanmar")  %>%
+# Filtering for Myanmar and only conflicts
+acled_mmr <- acled_asia_pacific_extract %>%
+  filter(country == "Myanmar") %>%
   mutate(admin1 = case_when(
     admin1 == "Chin" ~ "Chin State",
     admin1 == "Kachin" ~ "Kachin State",
@@ -52,8 +57,8 @@ acled_mmr<-acled_asia_pacific_extract %>%
     TRUE ~ admin1
   )) %>%
   filter(!is.na(admin1)) %>%
-  filter(!disorder_type %in% c("Demonstrations", "Strategic developments")) #%>% nrow() #nrow 57615
-nrow(acled_mmr) #50311
+  filter(!disorder_type %in% c("Demonstrations", "Strategic developments")) # %>% nrow() #nrow 57615
+nrow(acled_mmr) # 50311
 
 saveRDS(acled_mmr, "data/acled/acled_mmr.rds")
 
@@ -61,17 +66,17 @@ acled_mmr <- readRDS("data/acled/acled_mmr.rds")
 dim(acled_mmr)
 objects(acled_mmr)
 
-#Calculating the number of conflicts and death since the coup in 2021
+# Calculating the number of conflicts and death since the coup in 2021
 acled_mmr %>%
-  filter(year >= 2021) %>% 
+  filter(year >= 2021) %>%
   summarise(n = n(), fatalities = sum(fatalities)) #
 
 
-##DISORDER--------------------------
+## DISORDER--------------------------
 
-###Data visualization:Distribution of conflicts by year
+### Data visualization:Distribution of conflicts by year
 
-#This includes battles, excessive force against protesters, mob violence in riots, explosions/ remote violence, violence against civilians. 
+# This includes battles, excessive force against protesters, mob violence in riots, explosions/ remote violence, violence against civilians.
 acled_mmr_disorder_plot <- acled_mmr %>%
   group_by(year) %>%
   summarise(n = n()) %>%
@@ -88,18 +93,18 @@ acled_mmr_disorder_plot <- acled_mmr %>%
   ) +
   theme_classic(base_size = 14) +
   theme(
-    axis.ticks.x = element_line(color = 'black'),
-    axis.text.x = element_text(hjust = 0.5, color = 'black', size = 14), 
-    axis.text.y = element_text(hjust = 0.5, color = 'black', size = 14), 
-    axis.text.x.top = element_text(size = 14, face = 'bold'), 
-    plot.margin = unit(c(0.5, 1.2, 0.5, 0.3), 'lines'), 
-    panel.grid.major = element_blank(), 
+    axis.ticks.x = element_line(color = "black"),
+    axis.text.x = element_text(hjust = 0.5, color = "black", size = 14),
+    axis.text.y = element_text(hjust = 0.5, color = "black", size = 14),
+    axis.text.x.top = element_text(size = 14, face = "bold"),
+    plot.margin = unit(c(0.5, 1.2, 0.5, 0.3), "lines"),
+    panel.grid.major = element_blank(),
     panel.grid.minor = element_blank(),
-    legend.position = "none", 
-    axis.title = element_text(size = 14, face = 'bold'), 
-    legend.text = element_text(size = 14), 
-    legend.title = element_text(size = 14, face = 'bold'), 
-    plot.title = element_text(size = 14, face = 'bold', hjust = 0.5),
+    legend.position = "none",
+    axis.title = element_text(size = 14, face = "bold"),
+    legend.text = element_text(size = 14),
+    legend.title = element_text(size = 14, face = "bold"),
+    plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
     plot.caption = element_text(size = 14, hjust = 0, color = "gray50")
   )
 acled_mmr_disorder_plot
@@ -107,18 +112,19 @@ acled_mmr_disorder_plot
 ggsave("figures/acled_mmr_disorder_plot.png", acled_mmr_disorder_plot, width = 10, height = 6)
 
 
-###Data visualization:Distribution of conflicts by region and year 
+### Data visualization:Distribution of conflicts by region and year
 
 head(acled_mmr)
-unique(acled_mmr$admin1) #15 regions
+unique(acled_mmr$admin1) # 15 regions
 acled_mmr_disorder_region_plot <- acled_mmr %>%
   group_by(year, admin1) %>%
   summarise(n = n()) %>%
   ggplot(aes(x = year, y = n), color = "#450920") +
   geom_vline(xintercept = 2021, linetype = "dotted", color = "black", size = 0.8, alpha = 0.5) +
-  geom_line(linewidth = 1.2, color = "#450920") +  scale_x_continuous(limits = c(2013, 2025), expand = c(0, 0), breaks = seq(2013, 2025, 1)) +
+  geom_line(linewidth = 1.2, color = "#450920") +
+  scale_x_continuous(limits = c(2013, 2025), expand = c(0, 0), breaks = seq(2013, 2025, 1)) +
   scale_y_continuous(limits = c(0, 4000), breaks = seq(0, 4000, 1000), labels = scales::comma) +
-  facet_wrap(~ admin1, ncol = 3, nrow = 5) +
+  facet_wrap(~admin1, ncol = 3, nrow = 5) +
   theme_light() +
   labs(
     title = "Distribution of conflicts in Myanmar by region and year (2014-2024)\n(Armed Conflict Location & Event Data)",
@@ -128,29 +134,29 @@ acled_mmr_disorder_region_plot <- acled_mmr %>%
   ) +
   theme_bw(base_size = 18) +
   theme(
-    axis.ticks.x = element_line(color = 'black'),
-    axis.text.x = element_text(color = 'black', size = 18, angle = 45, hjust = 1), 
-    axis.text.y = element_text(hjust = 0.5, color = 'black', size = 18), 
-    axis.text.x.top = element_text(size = 18, face = 'bold'), 
-    plot.margin = unit(c(0.5, 1.2, 0.5, 0.3), 'lines'), 
-    panel.grid.major = element_blank(), 
+    axis.ticks.x = element_line(color = "black"),
+    axis.text.x = element_text(color = "black", size = 18, angle = 45, hjust = 1),
+    axis.text.y = element_text(hjust = 0.5, color = "black", size = 18),
+    axis.text.x.top = element_text(size = 18, face = "bold"),
+    plot.margin = unit(c(0.5, 1.2, 0.5, 0.3), "lines"),
+    panel.grid.major = element_blank(),
     panel.grid.minor = element_blank(),
-    legend.position = "none", 
-    axis.title = element_text(size = 18, face = 'bold'), 
-    legend.text = element_text(size = 18), 
-    legend.title = element_text(size = 18, face = 'bold'), 
-    plot.title = element_text(size = 18, face = 'bold', hjust = 0.5),
+    legend.position = "none",
+    axis.title = element_text(size = 18, face = "bold"),
+    legend.text = element_text(size = 18),
+    legend.title = element_text(size = 18, face = "bold"),
+    plot.title = element_text(size = 18, face = "bold", hjust = 0.5),
     plot.caption = element_text(size = 16, hjust = 0, color = "gray50"),
-    panel.spacing = unit(2 , "lines"),
+    panel.spacing = unit(2, "lines"),
     strip.text = element_text(size = 18)
   )
 acled_mmr_disorder_region_plot
 
 ggsave("figures/acled_mmr_disorder_region_plot.png", acled_mmr_disorder_region_plot, width = 16, height = 20)
 
-##FATALITIES--------------------------
+## FATALITIES--------------------------
 
-#Frequency of reported fatalities by year
+# Frequency of reported fatalities by year
 acled_mmr_fatalities_plot <- acled_mmr %>%
   group_by(year) %>%
   summarise(n = sum(fatalities)) %>%
@@ -167,36 +173,37 @@ acled_mmr_fatalities_plot <- acled_mmr %>%
   ) +
   theme_classic(base_size = 14) +
   theme(
-    axis.ticks.x = element_line(color = 'black'),
-    axis.text.x = element_text(hjust = 0.5, color = 'black', size = 14), 
-    axis.text.y = element_text(hjust = 0.5, color = 'black', size = 14), 
-    axis.text.x.top = element_text(size = 14, face = 'bold'), 
-    plot.margin = unit(c(0.5, 1.2, 0.5, 0.3), 'lines'), 
-    panel.grid.major = element_blank(), 
+    axis.ticks.x = element_line(color = "black"),
+    axis.text.x = element_text(hjust = 0.5, color = "black", size = 14),
+    axis.text.y = element_text(hjust = 0.5, color = "black", size = 14),
+    axis.text.x.top = element_text(size = 14, face = "bold"),
+    plot.margin = unit(c(0.5, 1.2, 0.5, 0.3), "lines"),
+    panel.grid.major = element_blank(),
     panel.grid.minor = element_blank(),
-    legend.position = "none", 
-    axis.title = element_text(size = 14, face = 'bold'), 
-    legend.text = element_text(size = 14), 
-    legend.title = element_text(size = 14, face = 'bold'), 
-    plot.title = element_text(size = 14, face = 'bold', hjust = 0.5),
+    legend.position = "none",
+    axis.title = element_text(size = 14, face = "bold"),
+    legend.text = element_text(size = 14),
+    legend.title = element_text(size = 14, face = "bold"),
+    plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
     plot.caption = element_text(size = 14, hjust = 0, color = "gray50")
   )
 acled_mmr_fatalities_plot
 ggsave("figures/acled_mmr_fatalities_plot.png", acled_mmr_fatalities_plot, width = 10, height = 6)
 
 
-#Distribution of fatalities by region and year
+# Distribution of fatalities by region and year
 head(acled_mmr)
-unique(acled_mmr$admin1) #18 regions
+unique(acled_mmr$admin1) # 18 regions
 
 acled_mmr_fatalities_region_plot <- acled_mmr %>%
   group_by(year, admin1) %>%
-  summarise(n = sum(fatalities)) %>% 
+  summarise(n = sum(fatalities)) %>%
   ggplot(aes(x = year, y = n), color = "#450920") +
   geom_vline(xintercept = 2021, linetype = "dotted", color = "black", size = 0.8, alpha = 0.5) +
-  geom_line(linewidth = 1.2, color = "#450920") +  scale_x_continuous(limits = c(2013, 2025), expand = c(0, 0), breaks = seq(2013, 2025, 1)) +
+  geom_line(linewidth = 1.2, color = "#450920") +
+  scale_x_continuous(limits = c(2013, 2025), expand = c(0, 0), breaks = seq(2013, 2025, 1)) +
   scale_y_continuous(limits = c(0, 11000), breaks = seq(0, 11000, 2000), labels = scales::comma) +
-  facet_wrap(~ admin1, ncol = 3, nrow = 6) +
+  facet_wrap(~admin1, ncol = 3, nrow = 6) +
   theme_light() +
   labs(
     title = "Distribution of fatalities in Myanmar by region and year (2014-2024)\n(Armed Conflict Location & Event Data)",
@@ -206,27 +213,27 @@ acled_mmr_fatalities_region_plot <- acled_mmr %>%
   ) +
   theme_bw(base_size = 18) +
   theme(
-    axis.ticks.x = element_line(color = 'black'),
-    axis.text.x = element_text(color = 'black', size = 18, angle = 45, hjust = 1), 
-    axis.text.y = element_text(hjust = 0.5, color = 'black', size = 18), 
-    axis.text.x.top = element_text(size = 18, face = 'bold'), 
-    plot.margin = unit(c(0.5, 1.2, 0.5, 0.3), 'lines'), 
-    panel.grid.major = element_blank(), 
+    axis.ticks.x = element_line(color = "black"),
+    axis.text.x = element_text(color = "black", size = 18, angle = 45, hjust = 1),
+    axis.text.y = element_text(hjust = 0.5, color = "black", size = 18),
+    axis.text.x.top = element_text(size = 18, face = "bold"),
+    plot.margin = unit(c(0.5, 1.2, 0.5, 0.3), "lines"),
+    panel.grid.major = element_blank(),
     panel.grid.minor = element_blank(),
-    legend.position = "none", 
-    axis.title = element_text(size = 18, face = 'bold'), 
-    legend.text = element_text(size = 18), 
-    legend.title = element_text(size = 18, face = 'bold'), 
-    plot.title = element_text(size = 18, face = 'bold', hjust = 0.5),
+    legend.position = "none",
+    axis.title = element_text(size = 18, face = "bold"),
+    legend.text = element_text(size = 18),
+    legend.title = element_text(size = 18, face = "bold"),
+    plot.title = element_text(size = 18, face = "bold", hjust = 0.5),
     plot.caption = element_text(size = 16, hjust = 0, color = "gray50"),
-    panel.spacing = unit(2 , "lines"),
+    panel.spacing = unit(2, "lines"),
     strip.text = element_text(size = 18)
   )
 
 acled_mmr_fatalities_region_plot
 ggsave("figures/acled_mmr_fatalities_region_plot.png", acled_mmr_fatalities_region_plot, width = 16, height = 20)
 
-#UPPSALA CONFLICT DATASET--------------------------
+# UPPSALA CONFLICT DATASET--------------------------
 
 uppsala_conflict_dataset <- readRDS("data/uppsala/GEDEvent_v25_1.rds")
 dim(uppsala_conflict_dataset)
@@ -234,18 +241,20 @@ objects(uppsala_conflict_dataset)
 
 unique(uppsala_conflict_dataset$country)
 
-uppsala_conflict_dataset_extract<- uppsala_conflict_dataset %>%
- filter(year >= 2014 & year <= 2024) %>%
- select(id, year, active_year, type_of_violence, conflict_new_id, dyad_new_id, dyad_name, side_a_new_id, side_a, side_b_new_id, side_b, 
-   adm_1, adm_2, country, country_id, region, event_clarity, date_prec, date_start, date_end, deaths_a, deaths_b, deaths_civilians, deaths_unknown, best, low) 
+uppsala_conflict_dataset_extract <- uppsala_conflict_dataset %>%
+  filter(year >= 2014 & year <= 2024) %>%
+  select(
+    id, year, active_year, type_of_violence, conflict_new_id, dyad_new_id, dyad_name, side_a_new_id, side_a, side_b_new_id, side_b,
+    adm_1, adm_2, country, country_id, region, event_clarity, date_prec, date_start, date_end, deaths_a, deaths_b, deaths_civilians, deaths_unknown, best, low
+  )
 nrow(uppsala_conflict_dataset_extract) # 213606
 
 uppsala_conflict_dataset_mmr <- uppsala_conflict_dataset_extract %>%
- filter(country == "Myanmar (Burma)") %>%
+  filter(country == "Myanmar (Burma)") %>%
   mutate(adm_1 = case_when(
     adm_1 == "Chin state" ~ "Chin State",
     adm_1 == "Kachin state" ~ "Kachin State",
-    adm_1 == "Kayah state" ~ "Kayah State", 
+    adm_1 == "Kayah state" ~ "Kayah State",
     adm_1 == "Kayin state" ~ "Kayin State",
     adm_1 == "Mon state" ~ "Mon State",
     adm_1 == "Rakhine state" ~ "Rakhine State",
@@ -259,16 +268,17 @@ uppsala_conflict_dataset_mmr <- uppsala_conflict_dataset_extract %>%
     adm_1 == "Yangon region" ~ "Yangon Region",
     adm_1 == "Naypyidaw Union territory" ~ "Naypyidaw Union Territory",
     TRUE ~ adm_1
-  )) %>% filter(!is.na(adm_1))
+  )) %>%
+  filter(!is.na(adm_1))
 
 nrow(uppsala_conflict_dataset_mmr) # 6212
 
-#Calculating the number of conflicts and death since the coup in 2021
+# Calculating the number of conflicts and death since the coup in 2021
 uppsala_conflict_dataset_mmr %>%
-  filter(year >= 2021) %>% 
+  filter(year >= 2021) %>%
   summarise(n = n(), fatalities = sum(deaths_a, deaths_b, deaths_civilians, deaths_unknown))
 
-#Distribution of conflicts by year
+# Distribution of conflicts by year
 uppsala_conflict_dataset_mmr_disorder_plot <- uppsala_conflict_dataset_mmr %>%
   group_by(year) %>%
   summarise(n = n()) %>%
@@ -285,25 +295,25 @@ uppsala_conflict_dataset_mmr_disorder_plot <- uppsala_conflict_dataset_mmr %>%
   ) +
   theme_classic(base_size = 14) +
   theme(
-    axis.ticks.x = element_line(color = 'black'),
-    axis.text.x = element_text(hjust = 0.5, color = 'black', size = 14), 
-    axis.text.y = element_text(hjust = 0.5, color = 'black', size = 14), 
-    axis.text.x.top = element_text(size = 14, face = 'bold'), 
-    plot.margin = unit(c(0.5, 1.2, 0.5, 0.3), 'lines'), 
-    panel.grid.major = element_blank(), 
+    axis.ticks.x = element_line(color = "black"),
+    axis.text.x = element_text(hjust = 0.5, color = "black", size = 14),
+    axis.text.y = element_text(hjust = 0.5, color = "black", size = 14),
+    axis.text.x.top = element_text(size = 14, face = "bold"),
+    plot.margin = unit(c(0.5, 1.2, 0.5, 0.3), "lines"),
+    panel.grid.major = element_blank(),
     panel.grid.minor = element_blank(),
-    legend.position = "none", 
-    axis.title = element_text(size = 14, face = 'bold'), 
-    legend.text = element_text(size = 14), 
-    legend.title = element_text(size = 14, face = 'bold'), 
-    plot.title = element_text(size = 14, face = 'bold', hjust = 0.5),
+    legend.position = "none",
+    axis.title = element_text(size = 14, face = "bold"),
+    legend.text = element_text(size = 14),
+    legend.title = element_text(size = 14, face = "bold"),
+    plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
     plot.caption = element_text(size = 14, hjust = 0, color = "gray50")
   )
 
 uppsala_conflict_dataset_mmr_disorder_plot
 ggsave("figures/uppsala_conflict_dataset_mmr_disorder_plot.png", uppsala_conflict_dataset_mmr_disorder_plot, width = 10, height = 6)
 
-#Distribution of fatalities by year
+# Distribution of fatalities by year
 uppsala_conflict_dataset_mmr_fatalities_plot <- uppsala_conflict_dataset_mmr %>%
   group_by(year) %>%
   summarise(n = sum(deaths_a, deaths_b, deaths_civilians, deaths_unknown)) %>%
@@ -312,7 +322,7 @@ uppsala_conflict_dataset_mmr_fatalities_plot <- uppsala_conflict_dataset_mmr %>%
   scale_y_continuous(limits = c(0, 3500), expand = c(0, 0), breaks = seq(0, 3500, 500), labels = scales::comma) +
   scale_x_continuous(limits = c(2013, 2025), expand = c(0, 0), breaks = seq(2013, 2025, 1)) +
   theme_classic() +
-  labs( 
+  labs(
     x = "Year",
     y = "Number of fatalities",
     title = "Number of fatalities from recorded conflicts in Myanmar by year (2014-2024)\n(Uppsala Conflict Data Program)",
@@ -320,18 +330,18 @@ uppsala_conflict_dataset_mmr_fatalities_plot <- uppsala_conflict_dataset_mmr %>%
   ) +
   theme_classic(base_size = 14) +
   theme(
-    axis.ticks.x = element_line(color = 'black'),
-    axis.text.x = element_text(hjust = 0.5, color = 'black', size = 14), 
-    axis.text.y = element_text(hjust = 0.5, color = 'black', size = 14), 
-    axis.text.x.top = element_text(size = 14, face = 'bold'), 
-    plot.margin = unit(c(0.5, 1.2, 0.5, 0.3), 'lines'), 
-    panel.grid.major = element_blank(), 
+    axis.ticks.x = element_line(color = "black"),
+    axis.text.x = element_text(hjust = 0.5, color = "black", size = 14),
+    axis.text.y = element_text(hjust = 0.5, color = "black", size = 14),
+    axis.text.x.top = element_text(size = 14, face = "bold"),
+    plot.margin = unit(c(0.5, 1.2, 0.5, 0.3), "lines"),
+    panel.grid.major = element_blank(),
     panel.grid.minor = element_blank(),
-    legend.position = "none",   
-    axis.title = element_text(size = 14, face = 'bold'), 
-    legend.text = element_text(size = 14), 
-    legend.title = element_text(size = 14, face = 'bold'), 
-    plot.title = element_text(size = 14, face = 'bold', hjust = 0.5),
+    legend.position = "none",
+    axis.title = element_text(size = 14, face = "bold"),
+    legend.text = element_text(size = 14),
+    legend.title = element_text(size = 14, face = "bold"),
+    plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
     plot.caption = element_text(size = 14, hjust = 0, color = "gray50")
   )
 
@@ -345,7 +355,9 @@ unique(uppsala_conflict_dataset_mmr$adm_1)
 uppsala_conflict_dataset_mmr %>%
   group_by(year, adm_1) %>%
   summarise(n = n()) %>%
-  filter(!is.na(adm_1)) %>% filter (adm_1 %in% c("Ayeyarwady region","Magway region", "Naypyidaw Union territory")) %>% arrange(desc(n)) 
+  filter(!is.na(adm_1)) %>%
+  filter(adm_1 %in% c("Ayeyarwady region", "Magway region", "Naypyidaw Union territory")) %>%
+  arrange(desc(n))
 
 uppsala_conflict_dataset_mmr_disorder_region_plot <- uppsala_conflict_dataset_mmr %>%
   group_by(year, adm_1) %>%
@@ -353,9 +365,10 @@ uppsala_conflict_dataset_mmr_disorder_region_plot <- uppsala_conflict_dataset_mm
   filter(!is.na(adm_1)) %>%
   ggplot(aes(x = year, y = n), color = "#450920") +
   geom_vline(xintercept = 2021, linetype = "dotted", color = "black", size = 0.8, alpha = 0.5) +
-  geom_line(linewidth = 1.2, color = "#450920") +  scale_x_continuous(limits = c(2013, 2025), expand = c(0, 0), breaks = seq(2013, 2025, 1)) +
+  geom_line(linewidth = 1.2, color = "#450920") +
+  scale_x_continuous(limits = c(2013, 2025), expand = c(0, 0), breaks = seq(2013, 2025, 1)) +
   scale_y_continuous(limits = c(0, 1000), breaks = seq(0, 1000, 200), labels = scales::comma) +
-  facet_wrap(~ adm_1, ncol = 3, nrow = 6) +
+  facet_wrap(~adm_1, ncol = 3, nrow = 6) +
   theme_light() +
   labs(
     title = "Distribution of conflicts in Myanmar by region and year (2014-2024)\n(Uppsala Conflict Data Program)",
@@ -364,23 +377,23 @@ uppsala_conflict_dataset_mmr_disorder_region_plot <- uppsala_conflict_dataset_mm
     caption = " Note: Conflicts include state-based conflict, non-state conflict, one-sided violence. State-based and non-state conflicts which resulted in at\nleast 25 (battle-related) deaths in a year are included. One-sided violence is defined as violence that resulted in at least 25 deaths. The\ndotted line represents the year 2021, when the military coup d'état occurred."
   ) +
   theme_bw(base_size = 18) +
-  theme( 
-    axis.ticks.x = element_line(color = 'black'),
-    axis.text.x = element_text(color = 'black', size = 18, angle = 45, hjust = 1), 
-    axis.text.y = element_text(hjust = 0.5, color = 'black', size = 18), 
-    axis.text.x.top = element_text(size = 18, face = 'bold'), 
-    plot.margin = unit(c(0.5, 1.2, 0.5, 0.3), 'lines'), 
-    panel.grid.major = element_blank(), 
+  theme(
+    axis.ticks.x = element_line(color = "black"),
+    axis.text.x = element_text(color = "black", size = 18, angle = 45, hjust = 1),
+    axis.text.y = element_text(hjust = 0.5, color = "black", size = 18),
+    axis.text.x.top = element_text(size = 18, face = "bold"),
+    plot.margin = unit(c(0.5, 1.2, 0.5, 0.3), "lines"),
+    panel.grid.major = element_blank(),
     panel.grid.minor = element_blank(),
-    legend.position = "none",  
-    legend.text = element_text(size = 18), 
-    legend.title = element_text(size = 18, face = 'bold'), 
-    plot.title = element_text(size = 18, face = 'bold', hjust = 0.5),
+    legend.position = "none",
+    legend.text = element_text(size = 18),
+    legend.title = element_text(size = 18, face = "bold"),
+    plot.title = element_text(size = 18, face = "bold", hjust = 0.5),
     plot.caption = element_text(size = 16, hjust = 0, color = "gray50"),
-    panel.spacing = unit(2 , "lines"),
+    panel.spacing = unit(2, "lines"),
     strip.text = element_text(size = 18)
-  )+
-  facet_wrap(~ adm_1, ncol = 3, nrow = 5)
+  ) +
+  facet_wrap(~adm_1, ncol = 3, nrow = 5)
 
 uppsala_conflict_dataset_mmr_disorder_region_plot
 ggsave("figures/uppsala_conflict_dataset_mmr_disorder_region_plot.png", uppsala_conflict_dataset_mmr_disorder_region_plot, width = 16, height = 20)
@@ -393,12 +406,13 @@ objects(uppsala_conflict_dataset_mmr)
 uppsala_conflict_dataset_mmr_fatalities_region_plot <- uppsala_conflict_dataset_mmr %>%
   group_by(year, adm_1) %>%
   summarise(n = sum(deaths_a, deaths_b, deaths_civilians, deaths_unknown)) %>%
-  filter(!is.na(adm_1)) %>% 
+  filter(!is.na(adm_1)) %>%
   ggplot(aes(x = year, y = n), color = "#450920") +
   geom_vline(xintercept = 2021, linetype = "dotted", color = "black", size = 0.8, alpha = 0.5) +
-  geom_line(linewidth = 1.2, color = "#450920") +  scale_x_continuous(limits = c(2013, 2025), expand = c(0, 0), breaks = seq(2013, 2025, 1)) +
+  geom_line(linewidth = 1.2, color = "#450920") +
+  scale_x_continuous(limits = c(2013, 2025), expand = c(0, 0), breaks = seq(2013, 2025, 1)) +
   scale_y_continuous(limits = c(0, 2000), breaks = seq(0, 2000, 500), labels = scales::comma) +
-  facet_wrap(~ adm_1, ncol = 3, nrow = 6) +
+  facet_wrap(~adm_1, ncol = 3, nrow = 6) +
   theme_light() +
   labs(
     title = "Distribution of fatalities in Myanmar by region and year (2014-2024)\n(Uppsala Conflict Data Program)",
@@ -407,24 +421,24 @@ uppsala_conflict_dataset_mmr_fatalities_region_plot <- uppsala_conflict_dataset_
     caption = "Note: Conflicts include state-based conflict, non-state conflict, one-sided violence. State-based and non-state conflicts which resulted in at\nleast 25 (battle-related) deaths in a year are included. One-sided violence is defined as violence that resulted in at least 25 deaths. The\ndotted line represents the year 2021, when the military coup d'état occurred."
   ) +
   theme_bw(base_size = 18) +
-  theme( 
-    axis.ticks.x = element_line(color = 'black'),
-    axis.text.x = element_text(color = 'black', size = 18, angle = 45, hjust = 1), 
-    axis.text.y = element_text(hjust = 0.5, color = 'black', size = 18), 
-    axis.text.x.top = element_text(size = 18, face = 'bold'), 
-    plot.margin = unit(c(0.5, 1.2, 0.5, 0.3), 'lines'), 
-    panel.grid.major = element_blank(), 
+  theme(
+    axis.ticks.x = element_line(color = "black"),
+    axis.text.x = element_text(color = "black", size = 18, angle = 45, hjust = 1),
+    axis.text.y = element_text(hjust = 0.5, color = "black", size = 18),
+    axis.text.x.top = element_text(size = 18, face = "bold"),
+    plot.margin = unit(c(0.5, 1.2, 0.5, 0.3), "lines"),
+    panel.grid.major = element_blank(),
     panel.grid.minor = element_blank(),
-    legend.position = "none",  
-    legend.text = element_text(size = 18), 
-    legend.title = element_text(size = 18, face = 'bold'), 
-    plot.title = element_text(size = 18, face = 'bold', hjust = 0.5),
+    legend.position = "none",
+    legend.text = element_text(size = 18),
+    legend.title = element_text(size = 18, face = "bold"),
+    plot.title = element_text(size = 18, face = "bold", hjust = 0.5),
     plot.caption = element_text(size = 16, hjust = 0, color = "gray50"),
-    panel.spacing = unit(2 , "lines"),
+    panel.spacing = unit(2, "lines"),
     strip.text = element_text(size = 18)
-  )+
-  facet_wrap(~ adm_1, ncol = 3, nrow = 5)
+  ) +
+  facet_wrap(~adm_1, ncol = 3, nrow = 5)
 
-uppsala_conflict_dataset_mmr_fatalities_region_plot 
+uppsala_conflict_dataset_mmr_fatalities_region_plot
 
 ggsave("figures/uppsala_conflict_dataset_mmr_fatalities_region_plot.png", uppsala_conflict_dataset_mmr_fatalities_region_plot, width = 16, height = 20)
