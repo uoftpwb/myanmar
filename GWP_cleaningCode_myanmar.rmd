@@ -15,6 +15,7 @@ Since the raw data file is relatively large, we used a separate environment to r
 ```{r eval=FALSE}
 # The code in this chunk will not be run in the current Rmd
 # load "dplyr"
+
 library(dplyr)
 library(data.table)
 
@@ -109,6 +110,8 @@ gallup <- gallup %>%
          WP150 = ifelse(WP150 %in% c(3, 4), NA, WP150),
          WP16 = ifelse(WP16 %in% c(98, 99), NA, WP16),
          WP18 = ifelse(WP18 %in% c(98, 99), NA, WP18),
+         WP22 = ifelse(WP22 %in% c(3, 4), NA, WP22),
+         WP27 = ifelse(WP27 %in% c(3, 4), NA, WP27),
          WP30 = ifelse(WP30 %in% c(3, 4), NA, WP30),
          WP31 = ifelse(WP31 %in% c(4, 5), NA, WP31),
          WP3120 = ifelse(WP3120 %in% c(997, 998, 999), NA, WP3120),
@@ -116,8 +119,10 @@ gallup <- gallup %>%
 
          WP40 = ifelse(WP40 %in% c(3, 4), NA, WP40),
          WP43 = ifelse(WP43 %in% c(3, 4), NA, WP43),
+         WP60 = ifelse(WP60 %in% c(3, 4), NA, WP60),
          WP63 = ifelse(WP63 %in% c(3, 4), NA, WP63),
          WP67 = ifelse(WP67 %in% c(3, 4), NA, WP67),
+         WP68 = ifelse(WP68 %in% c(3, 4), NA, WP68),
          WP69 = ifelse(WP69 %in% c(98, 99), NA, WP69),
          WP70 = ifelse(WP70 %in% c(98, 99), NA, WP70),
          WP71 = ifelse(WP71 %in% c(98, 99), NA, WP71),
@@ -148,11 +153,15 @@ gallup <- gallup %>%
     WP145 = ifelse(WP145 == 2, 0, WP145),
     WP146 = ifelse(WP146 == 2, 0, WP146),
     WP150 = ifelse(WP150 == 2, 0, WP150),
+    WP22 = ifelse(WP22 == 2, 0, WP22),
+    WP27 = ifelse(WP27 == 2, 0, WP27),
     WP30 = ifelse(WP30 == 2, 0, WP30),
     WP40 = ifelse(WP40 == 2, 0, WP40),
     WP43 = ifelse(WP43 == 2, 0, WP43),
+    WP60 = ifelse(WP60 == 2, 0, WP60),
     WP63 = ifelse(WP63 == 2, 0, WP63),
     WP67 = ifelse(WP67 == 2, 0, WP67),
+    WP68 = ifelse(WP68 == 2, 0, WP68),
     WP69 = ifelse(WP69 == 2, 0, WP69),
     WP70 = ifelse(WP70 == 2, 0, WP70),
     WP71 = ifelse(WP71 == 2, 0, WP71),
@@ -173,7 +182,7 @@ The object `gallup` is now a cleaned subset of the Gallup data.
 We save the Gallup cleaned data to a .rds file for later use
 
 ```{r exporting-gallup-cleaned}
-saveRDS(gallup, "data/(250717)GWP_cleaned_MyanmarProject.rds")
+saveRDS(gallup, "data/(250807)GWP_cleaned_MyanmarProject.rds")
 ```
 
 
