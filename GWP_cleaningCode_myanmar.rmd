@@ -41,7 +41,7 @@ varRequired <- c(
 gallupSubset <- gallupRaw %>% select(all_of(varRequired))
 
 # Save the gallupSubset data frame to a .rds file for later use
-saveRDS(gallupSubset, "(250717)GWP_RawSubset_MyanmarProject.rds")
+saveRDS(gallupSubset, "(250807)GWP_RawSubset_MyanmarProject.rds")
 ```
 
 
@@ -56,7 +56,7 @@ Once we had the subset of the Gallup data, we imported the data and loaded the n
 library(dplyr)
 
 # Read the RDS file
-gallupSubset <- readRDS("data/(250717)GWP_RawSubset_MyanmarProject.rds")
+gallupSubset <- readRDS("data/(250807)GWP_RawSubset_MyanmarProject.rds")
 ```
 
 
