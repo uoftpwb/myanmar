@@ -3,7 +3,7 @@
 # date: '2025-06-18'
 
 # Loading libraries
-p_list <- c("data.table", "Hmisc", "jtools", "sf", "ggplot2", "ggpubr", "ggrepel", "patchwork", "lubridate", "tidyverse", "EValue")
+p_list <- c("data.table", "Hmisc", "jtools", "sf", "ggplot2", "ggpubr", "ggrepel", "patchwork", "lubridate", "tidyverse", "EValue", "sf")
 
 # Check if packages are installed, install if needed, then load
 for (pkg in p_list) {
@@ -25,6 +25,7 @@ objects(gallup_world_cleaned)
 
 ## Processing data -------------------------------------------------------------
 gallup_world <- gallup_world_cleaned %>%
+  select(-WP22, -WP60, -WP68) %>%
   mutate(YEAR_INTERVIEW = as.numeric(as.character(YEAR_INTERVIEW))) %>%
   filter(YEAR_INTERVIEW >= 2014 & YEAR_INTERVIEW <= 2024) %>%
   mutate(YEAR_SINCE_EVENT = case_when(
@@ -130,14 +131,6 @@ gallup_world <- gallup_world_cleaned %>%
     TRUE ~ NA_character_
   )) %>%
   mutate(WP27 = factor(WP27, levels = c("No", "Yes"))) %>%
-  # Physical health (Summed score of WP22, WP60, WP68, after omitting missing value for any)
-  mutate(PHYSICAL_HEALTH = rowSums(select(., WP22, WP60, WP68), na.rm = TRUE)) %>%
-  mutate(PHYSICAL_HEALTH = case_when(
-    PHYSICAL_HEALTH == 0 ~ "0",
-    PHYSICAL_HEALTH == 1 ~ "1",
-    PHYSICAL_HEALTH == 2 ~ "2",
-    PHYSICAL_HEALTH == 3 ~ "3"
-  )) %>%
   # Necessity: Satisfaction with standard of living
   mutate(WP30 = case_when(
     WP30 == 1 ~ "Satisfied",
@@ -191,6 +184,13 @@ gallup_myanmar <- gallup_world %>%
     TRUE ~ NA_character_
   )) %>%
   filter(!is.na(REGION_MMR)) %>%
+  mutate(DHS_regions = case_when(
+    REGION_MMR %in% c("Chin State", "Kachin State", "Kayah State", "Kayin State", "Shan State") ~ "Hilly",
+    REGION_MMR %in% c("Mon State", "Rakhine State", "Tanintharyi Region") ~ "Coastal",
+    REGION_MMR %in% c("Ayeyarwady Region", "Bago Region", "Yangon Region") ~ "Delta",
+    REGION_MMR %in% c("Mandalay Region", "Sagaing Region", "Magway Region", "Naypyidaw Union Territory") ~ "Central Plain",
+    TRUE ~ NA_character_
+  )) %>%
   mutate(
     YEAR_SINCE_COUP = case_when(
       YEAR_INTERVIEW < 2021 ~ "Pre-coup",
@@ -214,12 +214,12 @@ saveRDS(gallup_myanmar, "data/GWP_myanmar_2014_2024.rds")
 gallup_myanmar <- readRDS("data/GWP_myanmar_2014_2024.rds")
 nrow(gallup_myanmar) # 11760
 
+
 # Sample sizes considerations---------
 # Getting the total and average sample size for by AFTER_COUP
 gallup_myanmar %>%
   group_by(AFTER_COUP) %>%
   summarise(total_sample_size = sum(WGT, na.rm = TRUE), no_of_years_surveyed = n_distinct(YEAR_INTERVIEW), mean_sample_size = total_sample_size / no_of_years_surveyed)
-
 
 # Sample size by region and save as a table in csv
 gallup_myanmar %>%
@@ -235,7 +235,15 @@ gallup_myanmar %>%
   arrange(desc(post_coup_sample_size)) %>%
   write_csv("data/myanmar_sample_size_by_region.csv")
 
-
+# Sample size by DHS regions and save as a table in csv
+gallup_myanmar %>%
+  group_by(DHS_regions, AFTER_COUP) %>%
+  summarise(total_sample_size = sum(WGT, na.rm = TRUE)) %>%
+  pivot_wider(names_from = AFTER_COUP, values_from = total_sample_size) %>%
+  mutate(total_sample_size = round(`Post-coup` + `Pre-coup`, 2), pre_coup_sample_size = round(`Pre-coup`, 2), post_coup_sample_size = round(`Post-coup`, 2)) %>%
+  select(DHS_regions, total_sample_size, pre_coup_sample_size, post_coup_sample_size) %>%
+  arrange(desc(post_coup_sample_size)) %>%
+  write_csv("data/myanmar_sample_size_by_DHS_regions.csv")
 
 # Creating the summary table for WP16 and WP18
 # Analysis ---------------------------------------------------------------------
@@ -274,7 +282,6 @@ SWB_myanmar_long <- SWB_myanmar %>%
 View(SWB_myanmar_long)
 
 # Plotting the data
-
 myanmar_SWB_plot <- SWB_myanmar_long %>%
   ggplot(aes(x = mid_date, y = mean, ymin = lowci, ymax = upci, color = variable, group = variable)) +
   geom_vline(xintercept = as.Date("2015-11-08"), linetype = "dotted", color = "black") +
@@ -1091,8 +1098,6 @@ myanmar_desc_distribution_of_religions_plot_2024 <- gallup_myanmar %>%
 
 ggsave("figures/myanmar_desc_distribution_of_religions_plot_2024.png", myanmar_desc_distribution_of_religions_plot_2024, width = 12, height = 8)
 
-
-
 ### Freedom of Media ------------------------------------------------------------
 myanmar_desc_freedom_of_media_plot <- gallup_myanmar %>%
   group_by(YEAR_INTERVIEW) %>%
@@ -1263,18 +1268,137 @@ ggsave("figures/myanmar_desc_confidence_in_military_plot.png", myanmar_desc_conf
 
 
 
+## Social Support (WP27)
+gallup_myanmar$WP27
+
+table(gallup_myanmar$WP27)
+
+
+myanmar_desc_social_support_plot <- gallup_myanmar %>%
+  filter(!is.na(WP27)) %>%
+  group_by(YEAR_INTERVIEW) %>%
+  summarize(prop = sum(WGT[WP27 == "Yes"]) / sum(WGT), prop_se = sqrt(prop * (1 - prop) / sum(WGT))) %>%
+  mutate(prop_lowci = prop - 1.96 * prop_se, prop_upci = prop + 1.96 * prop_se) %>%
+  select(YEAR_INTERVIEW, prop, prop_lowci, prop_upci) %>%
+  # Plotting the data
+  ggplot(aes(x = YEAR_INTERVIEW, y = prop * 100)) +
+  geom_point() +
+  geom_errorbar(aes(ymin = prop_lowci * 100, ymax = prop_upci * 100), width = 0.15) +
+  scale_x_continuous(breaks = seq(2014, 2024, 1)) +
+  scale_y_continuous(limits = c(0, 100), expand = c(0, 0), breaks = seq(0, 100, 10)) +
+  theme_classic(base_size = 14) +
+  theme(
+    axis.ticks.x = element_line(color = "black"),
+    axis.text.x = element_text(hjust = 0.5, color = "black", size = 14),
+    axis.text.y = element_text(hjust = 0.5, color = "black", size = 14),
+    axis.text.x.top = element_text(size = 14, face = "bold"),
+    plot.margin = unit(c(0.5, 1.2, -1, 0.3), "lines"),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    legend.position = c(0.9, 0.13),
+    axis.title = element_text(size = 14, face = "bold"),
+    legend.text = element_text(size = 12),
+    legend.title = element_blank(),
+    legend.background = element_blank(),
+    plot.title = element_text(size = 14, face = "bold", hjust = 0.5)
+  ) +
+  labs(
+    x = "Year", y = "Proportion of Respondents Agreeing",
+    title = "Social Support in Myanmar, 2014-2024\n"
+  )
+
+myanmar_desc_social_support_plot
+
+ggsave("figures/myanmar_desc_social_support_plot.png", myanmar_desc_social_support_plot, width = 12, height = 8)
+
+
 # By region --------------------------------------------------------------------
 
 
+# ## Life satisfaction and hope by regions (WP16 and WP18, REGION_MMR)--------------------------------
 
-## Life satisfaction and hope by regions (WP16 and WP18, REGION_MMR)--------------------------------
+# unique(gallup_myanmar$REGION_MMR)
 
-unique(gallup_myanmar$REGION_MMR)
+# myanmar_desc_LS_hope_by_regions_plot <-
+#   gallup_myanmar %>%
+#   filter(!is.na(WP16), !is.na(WGT), !is.na(WP18)) %>%
+#   group_by(YEAR_INTERVIEW, REGION_MMR) %>%
+#   summarize(
+#     LS_mean = Hmisc::wtd.mean(WP16, WGT, na.rm = TRUE),
+#     LS_se = sqrt(Hmisc::wtd.var(WP16, WGT, na.rm = TRUE) / sum(WGT, na.rm = TRUE)),
+#     Hope_mean = Hmisc::wtd.mean(WP18, WGT, na.rm = TRUE),
+#     Hope_se = sqrt(Hmisc::wtd.var(WP18, WGT, na.rm = TRUE) / sum(WGT, na.rm = TRUE))
+#   ) %>%
+#   mutate(
+#     LS_lowci = LS_mean - 1.96 * LS_se, LS_upci = LS_mean + 1.96 * LS_se,
+#     Hope_lowci = Hope_mean - 1.96 * Hope_se, Hope_upci = Hope_mean + 1.96 * Hope_se
+#   ) %>%
+#   pivot_longer(
+#     cols = c(LS_mean, LS_lowci, LS_upci, Hope_mean, Hope_lowci, Hope_upci),
+#     names_to = c("variable", "statistic"),
+#     names_pattern = "(LS|Hope)_(mean|lowci|upci)",
+#     values_to = "value"
+#   ) %>%
+#   pivot_wider(
+#     names_from = statistic,
+#     values_from = value
+#   ) %>%
+#   select(YEAR_INTERVIEW, REGION_MMR, variable, mean, lowci, upci) %>%
+#   # Plotting the data
+#   ggplot(aes(x = YEAR_INTERVIEW, y = mean, color = variable, group = variable)) +
+#   geom_point() +
+#   geom_line() +
+#   geom_errorbar(aes(ymin = lowci, ymax = upci), width = 0.15) +
+#   scale_x_continuous(breaks = seq(2014, 2024, 1)) +
+#   scale_y_continuous(limits = c(0, 10), expand = c(0, 0), breaks = seq(0, 10, 1)) +
+#   theme_bw(base_size = 14) +
+#   theme(
+#     axis.ticks.x = element_line(color = "black"),
+#     axis.text.x = element_text(color = "black", size = 14, angle = 45, hjust = 1),
+#     axis.text.y = element_text(hjust = 0.5, color = "black", size = 14),
+#     axis.text.x.top = element_text(size = 14, face = "bold"),
+#     plot.margin = unit(c(0.5, 1.2, 0.5, 0.3), "lines"),
+#     panel.grid.major = element_blank(),
+#     panel.grid.minor = element_blank(),
+#     legend.position = "none",
+#     axis.title = element_text(size = 14, face = "bold"),
+#     legend.text = element_text(size = 14),
+#     legend.title = element_text(size = 14, face = "bold"),
+#     plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+#     plot.caption = element_text(size = 14, hjust = 0, color = "gray50"),
+#     panel.spacing = unit(1, "lines")
+#   ) +
+#   facet_wrap(~REGION_MMR, nrow = 3) +
+#   labs(
+#     x = "Year", y = "Life Satisfaction and Hope",
+#     title = "Life Satisfaction and Hope by Regions in Myanmar, 2014-2024\n"
+#   )
 
-myanmar_desc_LS_hope_by_regions_plot <-
+# ggsave("figures/myanmar_desc_LS_hope_by_regions_plot.png", myanmar_desc_LS_hope_by_regions_plot, width = 20, height = 15)
+
+
+# gallup_myanmar %>%
+#   filter(!is.na(WP16) & !is.na(WGT)) %>%
+#   group_by(YEAR_INTERVIEW, REGION_MMR) %>%
+#   summarize(
+#     total_n = sum(WGT, na.rm = TRUE),
+#     LS_mean = Hmisc::wtd.mean(WP16, WGT, na.rm = TRUE),
+#     LS_se = sqrt(Hmisc::wtd.var(WP16, WGT, na.rm = TRUE) / sum(WGT, na.rm = TRUE))
+#   ) %>%
+#   mutate(LS_lowci = LS_mean - 1.96 * LS_se, LS_upci = LS_mean + 1.96 * LS_se) %>%
+#   select(YEAR_INTERVIEW, REGION_MMR, total_n, LS_mean, LS_lowci, LS_upci) %>%
+#   filter(REGION_MMR %in% c("Chin State", "Kachin State", "Kayah State")) %>%
+#   arrange(REGION_MMR)
+
+
+## Life satisfaction and hope by DHS regions (WP16 and WP18, DHS_regions)--------------------------------
+
+unique(gallup_myanmar$DHS_regions)
+
+myanmar_desc_LS_hope_by_DHS_regions_plot <-
   gallup_myanmar %>%
   filter(!is.na(WP16), !is.na(WGT), !is.na(WP18)) %>%
-  group_by(YEAR_INTERVIEW, REGION_MMR) %>%
+  group_by(YEAR_INTERVIEW, DHS_regions) %>%
   summarize(
     LS_mean = Hmisc::wtd.mean(WP16, WGT, na.rm = TRUE),
     LS_se = sqrt(Hmisc::wtd.var(WP16, WGT, na.rm = TRUE) / sum(WGT, na.rm = TRUE)),
@@ -1295,7 +1419,7 @@ myanmar_desc_LS_hope_by_regions_plot <-
     names_from = statistic,
     values_from = value
   ) %>%
-  select(YEAR_INTERVIEW, REGION_MMR, variable, mean, lowci, upci) %>%
+  select(YEAR_INTERVIEW, DHS_regions, variable, mean, lowci, upci) %>%
   # Plotting the data
   ggplot(aes(x = YEAR_INTERVIEW, y = mean, color = variable, group = variable)) +
   geom_point() +
@@ -1303,6 +1427,8 @@ myanmar_desc_LS_hope_by_regions_plot <-
   geom_errorbar(aes(ymin = lowci, ymax = upci), width = 0.15) +
   scale_x_continuous(breaks = seq(2014, 2024, 1)) +
   scale_y_continuous(limits = c(0, 10), expand = c(0, 0), breaks = seq(0, 10, 1)) +
+  scale_color_manual(values = c("#e76f51", "#2a9d8f"), labels = c("Life Satisfaction", "Hope"), name = "") +
+  scale_fill_manual(values = c("#e76f51", "#2a9d8f"), labels = c("Life Satisfaction", "Hope"), name = "") +
   theme_bw(base_size = 14) +
   theme(
     axis.ticks.x = element_line(color = "black"),
@@ -1312,7 +1438,7 @@ myanmar_desc_LS_hope_by_regions_plot <-
     plot.margin = unit(c(0.5, 1.2, 0.5, 0.3), "lines"),
     panel.grid.major = element_blank(),
     panel.grid.minor = element_blank(),
-    legend.position = "none",
+    legend.position = "bottom",
     axis.title = element_text(size = 14, face = "bold"),
     legend.text = element_text(size = 14),
     legend.title = element_text(size = 14, face = "bold"),
@@ -1320,13 +1446,14 @@ myanmar_desc_LS_hope_by_regions_plot <-
     plot.caption = element_text(size = 14, hjust = 0, color = "gray50"),
     panel.spacing = unit(1, "lines")
   ) +
-  facet_wrap(~REGION_MMR, nrow = 3) +
+  facet_wrap(~DHS_regions, nrow = 2) +
   labs(
     x = "Year", y = "Life Satisfaction and Hope",
-    title = "Life Satisfaction and Hope by Regions in Myanmar, 2014-2024\n"
+    title = "Life Satisfaction and Hope by DHS Regions in Myanmar, 2014-2024\n"
   )
 
-ggsave("figures/myanmar_desc_LS_hope_by_regions_plot.png", myanmar_desc_LS_hope_by_regions_plot, width = 20, height = 15)
+myanmar_desc_LS_hope_by_DHS_regions_plot
+ggsave("figures/myanmar_desc_LS_hope_by_DHS_regions_plot.png", myanmar_desc_LS_hope_by_DHS_regions_plot, width = 20, height = 15)
 
 
 gallup_myanmar %>%
@@ -1341,3 +1468,40 @@ gallup_myanmar %>%
   select(YEAR_INTERVIEW, REGION_MMR, total_n, LS_mean, LS_lowci, LS_upci) %>%
   filter(REGION_MMR %in% c("Chin State", "Kachin State", "Kayah State")) %>%
   arrange(REGION_MMR)
+
+# Map of Myanmar and DHS regions---------
+gallup_myanmar$DHS_regions
+gadm41_MMR_shp <- read_sf("data/gadm41_MMR_shp/gadm41_MMR_1.shp")
+
+# Harmonized name of the regions and add the DHS regions
+gadm41_MMR_shp <- gadm41_MMR_shp %>%
+  mutate(NAME_1_harmonized = case_when(
+    NAME_1 == "Ayeyarwady" ~ "Ayeyarwady Region",
+    NAME_1 == "Bago" ~ "Bago Region",
+    NAME_1 == "Chin" ~ "Chin State",
+    NAME_1 == "Kachin" ~ "Kachin State",
+    NAME_1 == "Kayah" ~ "Kayah State",
+    NAME_1 == "Kayin" ~ "Kayin State",
+    NAME_1 == "Magway" ~ "Magway Region",
+    NAME_1 == "Mandalay" ~ "Mandalay Region",
+    NAME_1 == "Mon" ~ "Mon State",
+    NAME_1 == "Naypyidaw" ~ "Naypyidaw Union Territory",
+    NAME_1 == "Rakhine" ~ "Rakhine State",
+    NAME_1 == "Sagaing" ~ "Sagaing Region",
+    NAME_1 == "Shan" ~ "Shan State",
+    NAME_1 == "Tanintharyi" ~ "Tanintharyi Region",
+    NAME_1 == "Yangon" ~ "Yangon Region"
+  )) %>%
+  left_join(gallup_myanmar %>% select(DHS_regions, REGION_MMR) %>% unique(), by = c("NAME_1_harmonized" = "REGION_MMR"))
+
+
+myanmar_desc_DHS_regions_map <- gadm41_MMR_shp %>%
+  filter(!is.na(DHS_regions)) %>%
+  ggplot(aes(fill = DHS_regions)) +
+  geom_sf() +
+  geom_sf_text(aes(label = NAME_1), size = 2, color = "black", fontface = "bold") +
+  scale_fill_manual(values = c("#b4bd9b", "#f6cf98", "#81bdc3", "#f9d6d3"), name = " Geographical Zones") +
+  theme_void() +
+  theme(legend.position = "bottom", legend.text = element_text(size = 12), legend.title = element_text(size = 14, face = "bold"))
+
+ggsave("figures/myanmar_desc_DHS_regions_map.png", myanmar_desc_DHS_regions_map, width = 12, height = 8)
