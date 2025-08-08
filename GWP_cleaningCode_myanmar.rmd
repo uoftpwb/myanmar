@@ -53,8 +53,6 @@ saveRDS(gallupSubset, "(250807)GWP_RawSubset_MyanmarProject.rds")
 Once we had the subset of the Gallup data, we imported the data and loaded the necessary packages:
 
 ```{r set-up}
-# Load "dplyr"
-library(dplyr)
 
 # Read the RDS file
 gallupSubset <- readRDS("data/(250807)GWP_RawSubset_MyanmarProject.rds")
@@ -72,6 +70,7 @@ gallup <- gallupSubset %>%
   # Create YEAR_INTERVIEW variable
   mutate(YEAR_INTERVIEW =
            ifelse(is.na(WP4), YEAR_CALENDAR, format(WP4, format = "%Y")))
+
 ```
 
 ### 1.3 Clean 'Don't Know' and 'Refused' Responses
@@ -116,7 +115,6 @@ gallup <- gallup %>%
          WP31 = ifelse(WP31 %in% c(4, 5), NA, WP31),
          WP3120 = ifelse(WP3120 %in% c(997, 998, 999), NA, WP3120),
          WP3117 = ifelse(WP3117 %in% c(4, 5), NA, WP3117),
-
          WP40 = ifelse(WP40 %in% c(3, 4), NA, WP40),
          WP43 = ifelse(WP43 %in% c(3, 4), NA, WP43),
          WP60 = ifelse(WP60 %in% c(3, 4), NA, WP60),
