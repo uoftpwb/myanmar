@@ -14,8 +14,6 @@ for (pkg in p_list) {
   library(pkg, character.only = TRUE)
 }
 
-# Style the code
-style_file("Testing.R")
 
 # From all the regional ACLED data from the data folder
 acled_asia_pacific <- read.csv("data/acled/Asia-Pacific_2018-2025_Jul04.csv")
@@ -57,6 +55,13 @@ acled_mmr <- acled_asia_pacific_extract %>%
     TRUE ~ admin1
   )) %>%
   filter(!is.na(admin1)) %>%
+  mutate(DHS_regions = case_when(
+    admin1 %in% c("Chin State", "Kachin State", "Kayah State", "Kayin State", "Shan State") ~ "Hilly",
+    admin1 %in% c("Mon State", "Rakhine State", "Tanintharyi Region") ~ "Coastal",
+    admin1 %in% c("Ayeyarwady Region", "Bago Region", "Yangon Region") ~ "Delta",
+    admin1 %in% c("Mandalay Region", "Sagaing Region", "Magway Region", "Naypyidaw Union Territory") ~ "Central Plain",
+    TRUE ~ NA_character_
+  )) %>%
   filter(!disorder_type %in% c("Demonstrations", "Strategic developments")) # %>% nrow() #nrow 57615
 nrow(acled_mmr) # 50311
 
@@ -247,6 +252,7 @@ uppsala_conflict_dataset_extract <- uppsala_conflict_dataset %>%
     id, year, active_year, type_of_violence, conflict_new_id, dyad_new_id, dyad_name, side_a_new_id, side_a, side_b_new_id, side_b,
     adm_1, adm_2, country, country_id, region, event_clarity, date_prec, date_start, date_end, deaths_a, deaths_b, deaths_civilians, deaths_unknown, best, low
   )
+
 nrow(uppsala_conflict_dataset_extract) # 213606
 
 uppsala_conflict_dataset_mmr <- uppsala_conflict_dataset_extract %>%
@@ -269,7 +275,14 @@ uppsala_conflict_dataset_mmr <- uppsala_conflict_dataset_extract %>%
     adm_1 == "Naypyidaw Union territory" ~ "Naypyidaw Union Territory",
     TRUE ~ adm_1
   )) %>%
-  filter(!is.na(adm_1))
+  filter(!is.na(adm_1)) %>%
+  mutate(DHS_regions = case_when(
+    adm_1 %in% c("Chin State", "Kachin State", "Kayah State", "Kayin State", "Shan State") ~ "Hilly",
+    adm_1 %in% c("Mon State", "Rakhine State", "Tanintharyi Region") ~ "Coastal",
+    adm_1 %in% c("Ayeyarwady Region", "Bago Region", "Yangon Region") ~ "Delta",
+    adm_1 %in% c("Mandalay Region", "Sagaing Region", "Magway Region", "Naypyidaw Union Territory") ~ "Central Plain",
+    TRUE ~ NA_character_
+  ))
 
 nrow(uppsala_conflict_dataset_mmr) # 6212
 
@@ -350,30 +363,28 @@ ggsave("figures/uppsala_conflict_dataset_mmr_fatalities_plot.png", uppsala_confl
 
 
 # Distributions of conflicts by admin1 region and year
-unique(uppsala_conflict_dataset_mmr$adm_1)
+unique(uppsala_conflict_dataset_mmr$DHS_regions)
 
 uppsala_conflict_dataset_mmr %>%
-  group_by(year, adm_1) %>%
-  summarise(n = n()) %>%
-  filter(!is.na(adm_1)) %>%
-  filter(adm_1 %in% c("Ayeyarwady region", "Magway region", "Naypyidaw Union territory")) %>%
-  arrange(desc(n))
+  group_by(DHS_regions) %>%
+  summarise(n = n()) 
 
-uppsala_conflict_dataset_mmr_disorder_region_plot <- uppsala_conflict_dataset_mmr %>%
-  group_by(year, adm_1) %>%
+
+uppsala_conflict_dataset_mmr_disorder_DHS_plot <- uppsala_conflict_dataset_mmr %>%
+  group_by(year, DHS_regions) %>%
   summarise(n = n()) %>%
-  filter(!is.na(adm_1)) %>%
+  filter(!is.na(DHS_regions)) %>%
   ggplot(aes(x = year, y = n), color = "#450920") +
   geom_vline(xintercept = 2021, linetype = "dotted", color = "black", size = 0.8, alpha = 0.5) +
   geom_line(linewidth = 1.2, color = "#450920") +
   scale_x_continuous(limits = c(2013, 2025), expand = c(0, 0), breaks = seq(2013, 2025, 1)) +
-  scale_y_continuous(limits = c(0, 1000), breaks = seq(0, 1000, 200), labels = scales::comma) +
-  facet_wrap(~adm_1, ncol = 3, nrow = 6) +
+  scale_y_continuous(limits = c(0, 1500), breaks = seq(0, 1500, 200), labels = scales::comma) +
+  facet_wrap(~DHS_regions, ncol = 2, nrow = 2) +
   theme_light() +
   labs(
-    title = "Distribution of conflicts in Myanmar by region and year (2014-2024)\n(Uppsala Conflict Data Program)",
+    title = "Distribution of conflicts in Myanmar by DHS regions and year (2014-2024)\n(Uppsala Conflict Data Program)",
     x = "\nYear\n",
-    y = "\nNumber of events\n",
+    y = "\nNumber of conflicts\n",
     caption = " Note: Conflicts include state-based conflict, non-state conflict, one-sided violence. State-based and non-state conflicts which resulted in at\nleast 25 (battle-related) deaths in a year are included. One-sided violence is defined as violence that resulted in at least 25 deaths. The\ndotted line represents the year 2021, when the military coup d'état occurred."
   ) +
   theme_bw(base_size = 18) +
@@ -393,26 +404,26 @@ uppsala_conflict_dataset_mmr_disorder_region_plot <- uppsala_conflict_dataset_mm
     panel.spacing = unit(2, "lines"),
     strip.text = element_text(size = 18)
   ) +
-  facet_wrap(~adm_1, ncol = 3, nrow = 5)
+  facet_wrap(~DHS_regions, ncol = 2, nrow = 2)
 
-uppsala_conflict_dataset_mmr_disorder_region_plot
-ggsave("figures/uppsala_conflict_dataset_mmr_disorder_region_plot.png", uppsala_conflict_dataset_mmr_disorder_region_plot, width = 16, height = 20)
+uppsala_conflict_dataset_mmr_disorder_DHS_plot
+ggsave("figures/uppsala_conflict_dataset_mmr_disorder_DHS_plot.png", uppsala_conflict_dataset_mmr_disorder_DHS_plot, width = 10, height = 10)
 
 
 ### Distributions of fatalities by admin1 region and year-----------------------
 
 objects(uppsala_conflict_dataset_mmr)
 
-uppsala_conflict_dataset_mmr_fatalities_region_plot <- uppsala_conflict_dataset_mmr %>%
-  group_by(year, adm_1) %>%
+uppsala_conflict_dataset_mmr_fatalities_DHS_plot <- uppsala_conflict_dataset_mmr %>%
+  group_by(year, DHS_regions) %>%
   summarise(n = sum(deaths_a, deaths_b, deaths_civilians, deaths_unknown)) %>%
-  filter(!is.na(adm_1)) %>%
+  filter(!is.na(DHS_regions)) %>%
   ggplot(aes(x = year, y = n), color = "#450920") +
   geom_vline(xintercept = 2021, linetype = "dotted", color = "black", size = 0.8, alpha = 0.5) +
   geom_line(linewidth = 1.2, color = "#450920") +
   scale_x_continuous(limits = c(2013, 2025), expand = c(0, 0), breaks = seq(2013, 2025, 1)) +
   scale_y_continuous(limits = c(0, 2000), breaks = seq(0, 2000, 500), labels = scales::comma) +
-  facet_wrap(~adm_1, ncol = 3, nrow = 6) +
+  facet_wrap(~DHS_regions, ncol = 2, nrow = 2) +
   theme_light() +
   labs(
     title = "Distribution of fatalities in Myanmar by region and year (2014-2024)\n(Uppsala Conflict Data Program)",
@@ -437,8 +448,8 @@ uppsala_conflict_dataset_mmr_fatalities_region_plot <- uppsala_conflict_dataset_
     panel.spacing = unit(2, "lines"),
     strip.text = element_text(size = 18)
   ) +
-  facet_wrap(~adm_1, ncol = 3, nrow = 5)
+  facet_wrap(~DHS_regions, ncol = 2, nrow = 2)
 
-uppsala_conflict_dataset_mmr_fatalities_region_plot
+uppsala_conflict_dataset_mmr_fatalities_DHS_plot
 
-ggsave("figures/uppsala_conflict_dataset_mmr_fatalities_region_plot.png", uppsala_conflict_dataset_mmr_fatalities_region_plot, width = 16, height = 20)
+ggsave("figures/uppsala_conflict_dataset_mmr_fatalities_DHS_plot.png", uppsala_conflict_dataset_mmr_fatalities_DHS_plot, width = 10, height = 10)

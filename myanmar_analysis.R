@@ -3,7 +3,7 @@
 # date: '2025-06-18'
 
 # Loading libraries
-p_list <- c("data.table", "Hmisc", "jtools", "sf", "ggplot2", "ggpubr", "ggrepel", "patchwork", "lubridate", "tidyverse", "EValue", "sf")
+p_list <- c("data.table", "Hmisc", "jtools", "sf", "ggplot2", "ggpubr", "ggrepel", "patchwork", "lubridate", "tidyverse", "EValue", "sf", "ggtext", "shadowtext")
 
 # Check if packages are installed, install if needed, then load
 for (pkg in p_list) {
@@ -22,6 +22,10 @@ gallup_world_cleaned <- readRDS("data/(250807)GWP_cleaned_MyanmarProject.rds")
 
 dim(gallup_world_cleaned)
 objects(gallup_world_cleaned)
+
+
+nrow(gallup_world_cleaned[gallup_world_cleaned$COUNTRYNEW == "Myanmar", ])
+nrow(gallup_world_cleaned[gallup_world_cleaned$COUNTRYNEW == "Ukraine", ])
 
 ## Processing data -------------------------------------------------------------
 gallup_world <- gallup_world_cleaned %>%
@@ -158,8 +162,14 @@ gallup_world <- gallup_world_cleaned %>%
     WP98 == 0 ~ "Dissatisfied",
     TRUE ~ NA_character_
   )) %>%
-  mutate(WP98 = factor(WP98, levels = c("Dissatisfied", "Satisfied")))
-
+  mutate(WP98 = factor(WP98, levels = c("Dissatisfied", "Satisfied"))) %>%
+  # Religion
+  mutate(BUDDHISM = case_when(
+    WP1233RECODED %in% c(1, 2, 3, 5, 6, 7) ~ "Other regions/Secular",
+    WP1233RECODED == 4 ~ "Buddhism",
+    TRUE ~ NA_character_
+  )) %>%
+  mutate(BENEVOLENCE = rowSums(select(., WP108, WP109, WP110), na.rm = TRUE))
 
 # Extracting Myanmar data---------
 objects(gallup_world)
@@ -213,6 +223,7 @@ saveRDS(gallup_myanmar, "data/GWP_myanmar_2014_2024.rds")
 
 gallup_myanmar <- readRDS("data/GWP_myanmar_2014_2024.rds")
 nrow(gallup_myanmar) # 11760
+
 
 
 # Sample sizes considerations---------
@@ -637,26 +648,6 @@ myanmar_desc_benevolence_plot
 
 ggsave("figures/myanmar_desc_benevolence_plot.png", myanmar_desc_benevolence_plot, width = 12, height = 7)
 
-
-# Mean over time of donating money, volunteering, and helping strangers
-gallup_myanmar %>%
-  filter(!is.na(WP108) & !is.na(WP109) & !is.na(WP110) & !is.na(WGT)) %>%
-  #  group_by(YEAR_SINCE_COUP) %>%
-  filter(mid_date > as.Date("2021-02-01")) %>%
-  summarise(
-    donating_money_mean = stats::weighted.mean(WP108, WGT, na.rm = TRUE),
-    donating_money_se = sqrt(donating_money_mean * (1 - donating_money_mean) / sum(WGT, na.rm = TRUE)),
-    volunteering_mean = stats::weighted.mean(WP109, WGT, na.rm = TRUE),
-    volunteering_se = sqrt(volunteering_mean * (1 - volunteering_mean) / sum(WGT, na.rm = TRUE)),
-    helping_others_mean = stats::weighted.mean(WP110, WGT, na.rm = TRUE),
-    helping_others_se = sqrt(helping_others_mean * (1 - helping_others_mean) / sum(WGT, na.rm = TRUE))
-  ) %>%
-  mutate(
-    donating_money_mean = donating_money_mean * 100, donating_money_se = donating_money_se * 100,
-    volunteering_mean = volunteering_mean * 100, volunteering_se = volunteering_se * 100,
-    helping_others_mean = helping_others_mean * 100, helping_others_se = helping_others_se * 100
-  ) %>%
-  select(donating_money_mean, volunteering_mean, helping_others_mean)
 
 
 ## Confidence in national institutions ------------------------------------------
@@ -1449,25 +1440,12 @@ myanmar_desc_LS_hope_by_DHS_regions_plot <-
   facet_wrap(~DHS_regions, nrow = 2) +
   labs(
     x = "Year", y = "Life Satisfaction and Hope",
-    title = "Life Satisfaction and Hope by DHS Regions in Myanmar, 2014-2024\n"
+    title = "Life Satisfaction and Hope by Demography and Health Surveys(DHS) Program Regions in Myanmar, 2014-2024\n"
   )
 
 myanmar_desc_LS_hope_by_DHS_regions_plot
 ggsave("figures/myanmar_desc_LS_hope_by_DHS_regions_plot.png", myanmar_desc_LS_hope_by_DHS_regions_plot, width = 20, height = 15)
 
-
-gallup_myanmar %>%
-  filter(!is.na(WP16) & !is.na(WGT)) %>%
-  group_by(YEAR_INTERVIEW, REGION_MMR) %>%
-  summarize(
-    total_n = sum(WGT, na.rm = TRUE),
-    LS_mean = Hmisc::wtd.mean(WP16, WGT, na.rm = TRUE),
-    LS_se = sqrt(Hmisc::wtd.var(WP16, WGT, na.rm = TRUE) / sum(WGT, na.rm = TRUE))
-  ) %>%
-  mutate(LS_lowci = LS_mean - 1.96 * LS_se, LS_upci = LS_mean + 1.96 * LS_se) %>%
-  select(YEAR_INTERVIEW, REGION_MMR, total_n, LS_mean, LS_lowci, LS_upci) %>%
-  filter(REGION_MMR %in% c("Chin State", "Kachin State", "Kayah State")) %>%
-  arrange(REGION_MMR)
 
 # Map of Myanmar and DHS regions---------
 gallup_myanmar$DHS_regions
@@ -1497,11 +1475,84 @@ gadm41_MMR_shp <- gadm41_MMR_shp %>%
 
 myanmar_desc_DHS_regions_map <- gadm41_MMR_shp %>%
   filter(!is.na(DHS_regions)) %>%
-  ggplot(aes(fill = DHS_regions)) +
-  geom_sf() +
-  geom_sf_text(aes(label = NAME_1), size = 2, color = "black", fontface = "bold") +
-  scale_fill_manual(values = c("#b4bd9b", "#f6cf98", "#81bdc3", "#f9d6d3"), name = " Geographical Zones") +
+  ggplot() +
+  geom_sf(aes(fill = DHS_regions)) +
+  # Shadow layer for auto-positioned labels (excluding custom positioned ones)
+  geom_sf_text(
+    data = gadm41_MMR_shp %>%
+      filter(!is.na(DHS_regions) & !NAME_1 %in% c("Yangon", "Ayeyarwady", "Rakhine", "Mandalay", "Tanintharyi", "Magway", "Kayin", "Mon")),
+    aes(label = NAME_1), size = 2.5, color = "#F5F5F5", fontface = "bold",
+    nudge_x = 0.02, nudge_y = -0.02
+  ) +
+  # Main text layer for auto-positioned labels (excluding custom positioned ones)
+  geom_sf_text(
+    data = gadm41_MMR_shp %>%
+      filter(!is.na(DHS_regions) & !NAME_1 %in% c("Yangon", "Ayeyarwady", "Rakhine", "Mandalay", "Tanintharyi", "Magway", "Kayin", "Mon")),
+    aes(label = NAME_1),
+    size = 2.5, color = "black", fontface = "bold"
+  ) +
+  # Custom positioned shadow for specific labels
+  geom_text(
+    data = data.frame(
+      x = c(96.3, 93.25, 92.6, 95.55, 100.4, 95, 98, 97.25),
+      y = c(16.8, 16.5, 19.6, 21.05, 12.4, 20.2, 16.9, 15.7),
+      label = c("Yangon", "Ayeyarwady", "Rakhine", "Mandalay", "Tanintharyi", "Magway", "Kayin", "Mon")
+    ), aes(x = x + 0.02, y = y - 0.02, label = label),
+    size = 2.5, color = "#F5F5F5", fontface = "bold"
+  ) +
+  # Custom positioned main text for specific labels
+  geom_text(
+    data = data.frame(
+      x = c(96.3, 93.25, 92.6, 95.55, 100.4, 95, 98, 97.25),
+      y = c(16.8, 16.5, 19.6, 21.05, 12.4, 20.2, 16.9, 15.7),
+      label = c("Yangon", "Ayeyarwady", "Rakhine", "Mandalay", "Tanintharyi", "Magway", "Kayin", "Mon")
+    ), aes(x = x, y = y, label = label),
+    size = 2.5, color = "black", fontface = "bold"
+  ) +
+  scale_fill_manual(
+    values = c("#fff6e4", "#8bb8c7", "#add19c", "#c9bdb7"),
+    labels = c("Central Plain", "Coastal", "Delta", "Hilly"), name = "Geographical Zones"
+  ) +
   theme_void() +
-  theme(legend.position = "bottom", legend.text = element_text(size = 12), legend.title = element_text(size = 14, face = "bold"))
+  theme(
+    legend.position = "bottom",
+    legend.text = element_text(size = 12),
+    legend.title = element_text(size = 14, face = "bold"),
+    legend.key.size = unit(0.5, "cm"),
+    legend.key.width = unit(1, "cm"),
+    legend.spacing.x = unit(0.5, "cm")
+  )
+
+myanmar_desc_DHS_regions_map
 
 ggsave("figures/myanmar_desc_DHS_regions_map.png", myanmar_desc_DHS_regions_map, width = 12, height = 8)
+
+
+# Descriptive statistics -----------------------------------
+
+# weighted sample size, by year and total
+gallup_myanmar %>%
+  group_by(YEAR_INTERVIEW) %>%
+  summarize(total_n = sum(WGT, na.rm = TRUE)) %>%
+  pull(total_n) %>%
+  sum()
+
+# average age of the respondents (2014-2024)
+summary(gallup_myanmar$WP1220)
+
+
+# Weighted proportion of women and men
+gallup_myanmar %>%
+  summarize(prop_women = sum(WGT[WP1219 == "Female"], na.rm = TRUE) / sum(WGT, na.rm = TRUE) * 100)
+
+
+# Weighted proportion in each geogrpahical zone
+gallup_myanmar %>%
+  group_by(DHS_regions) %>%
+  summarize(prop_women = sum(WGT[WP1219 == "Female"], na.rm = TRUE) / sum(WGT, na.rm = TRUE) * 100)
+
+
+# Weighted proportion in each DHS region
+gallup_myanmar %>%
+  group_by(DHS_regions) %>%
+  summarize(prop_women = sum(WGT[WP1219 == "Female"], na.rm = TRUE) / sum(WGT, na.rm = TRUE) * 100)

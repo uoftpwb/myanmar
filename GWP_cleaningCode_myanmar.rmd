@@ -95,7 +95,7 @@ gallup <- gallup %>%
          WP1220 = ifelse(WP1220 %in% c(100), NA, WP1220),
          WP1223 = ifelse(WP1223 %in% c(6, 7), NA, WP1223),
          WP1233 = ifelse(WP1233 %in% c(98, 99, 97), NA, WP1233),
-         WP1233RECODED = ifelse(WP1233RECODED %in% c(98, 99), NA, WP1233RECODED),
+         WP1233RECODED = ifelse(WP1233RECODED %in% c(8, 98, 99), NA, WP1233RECODED),
          WP13125 = ifelse(WP13125 %in% c(3, 4), NA, WP13125),
          WP1325 = ifelse(WP1325 %in% c(3, 4), NA, WP1325),
          WP134 = ifelse(WP134 %in% c(3, 4), NA, WP134),
