@@ -8,7 +8,7 @@ date: '2025-06-18'
 
 The version of the Gallup raw data used in this study is "The_Gallup_022125.dat". 
 
-This data was released to the [UofT Map and Data Library](https://mdl.library.utoronto.ca/collections/numeric-data/gallup) in February 2024.
+This data was released to the [UofT Map and Data Library](https://mdl.library.utoronto.ca/collections/numeric-data/gallup) in September 2025.
 
 Since the raw data file is relatively large, we used a separate environment to run the following code, which subsets the variables that we needed.
 
@@ -22,8 +22,8 @@ library(data.table)
 ```{r eval=FALSE}
 # This code will not be run in the current Rmd
 
-# Import the data file "The_Gallup_022125.dat"
-gallupRaw <- rio::import("~/Documents/GitHub/DATA/The_Gallup_022125.dat")
+# Import the data file "The_Gallup_091925.dat"
+gallupRaw <- rio::import("~/Documents/GitHub/DATA/The_Gallup_091925.dat")
 
 # Create a character vector of the names of the variables we're interested in
 varRequired <- c(
@@ -42,7 +42,7 @@ varRequired <- c(
 gallupSubset <- gallupRaw %>% select(all_of(varRequired))
 
 # Save the gallupSubset data frame to a .rds file for later use
-saveRDS(gallupSubset, "(250807)GWP_RawSubset_MyanmarProject.rds")
+saveRDS(gallupSubset, "(250918)GWP_RawSubset_MyanmarProject.rds")
 ```
 
 
