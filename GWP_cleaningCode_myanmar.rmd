@@ -33,8 +33,8 @@ varRequired <- c(
   "WP1325", "WP134", "WP137", "WP138", "WP139", "WP14", "WP144", "WP145", "WP146",
   "WP150", "WP16", "WP18", "WP22", "WP27",
   "WP3117", "WP4", "WP40", "WP43", 
-  "WP60","WP63", "WP67", "WP68", "WP69",
-  "WP70", "WP71", "WP74", "WP98", "WPID", "YEAR_CALENDAR", "YEAR_WAVE", 
+  "WP59", "WP60", "WP61", "WP63", "WP64", "WP65", "WP67", "WP68", "WP69",
+  "WP70", "WP71", "WP74", "WP76", "WP98", "WPID", "YEAR_CALENDAR", "YEAR_WAVE", 
   "WP30", "WP31", "WP3120"
 )
 

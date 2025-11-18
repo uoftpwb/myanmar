@@ -23,10 +23,6 @@ gallup_world_cleaned <- readRDS("data/(250807)GWP_cleaned_MyanmarProject.rds")
 dim(gallup_world_cleaned)
 objects(gallup_world_cleaned)
 
-
-nrow(gallup_world_cleaned[gallup_world_cleaned$COUNTRYNEW == "Myanmar", ])
-nrow(gallup_world_cleaned[gallup_world_cleaned$COUNTRYNEW == "Ukraine", ])
-
 ## Processing data -------------------------------------------------------------
 gallup_world <- gallup_world_cleaned %>%
   select(-WP22, -WP60, -WP68) %>%
