@@ -55,9 +55,9 @@ Once we had the subset of the Gallup data, we imported the data and loaded the n
 ```{r set-up}
 
 # Read the RDS file
-gallupSubset <- readRDS("data/(250807)GWP_RawSubset_MyanmarProject.rds")
+gallupSubset <- readRDS("data/(250918)GWP_RawSubset_MyanmarProject.rds")
+objects(gallupSubset)
 ```
-
 
 ### 1.2 Create `YEAR_INTERVIEW` 
 
@@ -117,8 +117,12 @@ gallup <- gallup %>%
          WP3117 = ifelse(WP3117 %in% c(4, 5), NA, WP3117),
          WP40 = ifelse(WP40 %in% c(3, 4), NA, WP40),
          WP43 = ifelse(WP43 %in% c(3, 4), NA, WP43),
+         WP59 = ifelse(WP59 %in% c(3, 4), NA, WP59),
          WP60 = ifelse(WP60 %in% c(3, 4), NA, WP60),
+         WP61 = ifelse(WP61 %in% c(3, 4), NA, WP61),
          WP63 = ifelse(WP63 %in% c(3, 4), NA, WP63),
+         WP64 = ifelse(WP64 %in% c(3, 4), NA, WP64),
+         WP65 = ifelse(WP65 %in% c(3, 4), NA, WP65),
          WP67 = ifelse(WP67 %in% c(3, 4), NA, WP67),
          WP68 = ifelse(WP68 %in% c(3, 4), NA, WP68),
          WP69 = ifelse(WP69 %in% c(98, 99), NA, WP69),
@@ -156,8 +160,12 @@ gallup <- gallup %>%
     WP30 = ifelse(WP30 == 2, 0, WP30),
     WP40 = ifelse(WP40 == 2, 0, WP40),
     WP43 = ifelse(WP43 == 2, 0, WP43),
+    WP59 = ifelse(WP59 == 2, 0, WP59),
     WP60 = ifelse(WP60 == 2, 0, WP60),
+    WP61 = ifelse(WP61 == 2, 0, WP61),
     WP63 = ifelse(WP63 == 2, 0, WP63),
+    WP64 = ifelse(WP64 == 2, 0, WP64),
+    WP65 = ifelse(WP65 == 2, 0, WP65),
     WP67 = ifelse(WP67 == 2, 0, WP67),
     WP68 = ifelse(WP68 == 2, 0, WP68),
     WP69 = ifelse(WP69 == 2, 0, WP69),
@@ -174,13 +182,12 @@ gallup <- gallup %>%
   )
 ```
 
-
 The object `gallup` is now a cleaned subset of the Gallup data.
 
 We save the Gallup cleaned data to a .rds file for later use
 
 ```{r exporting-gallup-cleaned}
-saveRDS(gallup, "data/(250807)GWP_cleaned_MyanmarProject.rds")
+saveRDS(gallup, "data/(250918)GWP_cleaned_MyanmarProject.rds")
 ```
 
 
