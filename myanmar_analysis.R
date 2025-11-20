@@ -18,31 +18,17 @@ for (pkg in p_list) {
 # Data -------------------------------------------------------------------------
 
 ## Load data ------------------------------------------------------------------
-gallup_world_cleaned <- readRDS("data/(250807)GWP_cleaned_MyanmarProject.rds")
-
-dim(gallup_world_cleaned)
-objects(gallup_world_cleaned)
+gallup_world_cleaned <- readRDS("data/(250918)GWP_cleaned_MyanmarProject.rds")
 
 ## Processing data -------------------------------------------------------------
 gallup_world <- gallup_world_cleaned %>%
-  select(-WP22, -WP60, -WP68) %>%
-  mutate(YEAR_INTERVIEW = as.numeric(as.character(YEAR_INTERVIEW))) %>%
-  filter(YEAR_INTERVIEW >= 2014 & YEAR_INTERVIEW <= 2024) %>%
-  mutate(YEAR_SINCE_EVENT = case_when(
-    YEAR_INTERVIEW < 2021 ~ "Pre-coup",
-    YEAR_INTERVIEW == 2021 ~ "2021",
-    YEAR_INTERVIEW == 2022 ~ "2022",
-    YEAR_INTERVIEW == 2023 ~ "2023",
-    YEAR_INTERVIEW == 2024 ~ "2024"
-  )) %>%
-  mutate(YEAR_SINCE_EVENT = factor(YEAR_SINCE_EVENT, levels = c("Pre-coup", "2021", "2022", "2023", "2024"))) %>%
   mutate(AGE_GROUP = factor(
     cut(WP1220,
-      breaks = c(0, 40, 60, Inf),
-      labels = c("Under 40", "40-60", "Above 60"),
+      breaks = c(0, 30, 45, 60, Inf),
+      labels = c("Under 30", "30-44", "45-59", "Above 60"), # 15–29, 30–44, 45–59, and 60 years old and above.
       include.lowest = TRUE
     ),
-    levels = c("Under 40", "40-60", "Above 60")
+    levels = c("Under 30", "30-44", "45-59", "Above 60")
   )) %>%
   mutate(INCOME_5 = case_when(
     INCOME_5 == 1 ~ "Poorest 20%",
@@ -167,9 +153,183 @@ gallup_world <- gallup_world_cleaned %>%
   )) %>%
   mutate(BENEVOLENCE = rowSums(select(., WP108, WP109, WP110), na.rm = TRUE))
 
-# Extracting Myanmar data---------
-objects(gallup_world)
+#################################################################################################################################
+# Create composite variables for positive affect and negative affect
+# First let's check the number of these affect iterms were asked in each country, every year
 
+# For each item, calculate the proportion of affirmative answers (1),
+# accounting for potential missing questions by using the valid denominator.
+
+affect_items <- list(
+  POSITIVE = c("WP59", "WP60", "WP61", "WP63", "WP64", "WP65", "WP67", "WP76"), # WP59, WP64, WP76 are asked in less than 15% of the country-years so they are taken out
+  NEGATIVE = c("WP68", "WP69", "WP70", "WP71", "WP74")
+)
+
+# First, check which affect columns actually exist in the dataset
+available_affect_cols <- intersect(unlist(affect_items), names(gallup_world))
+cat("Available affect columns:", paste(available_affect_cols, collapse = ", "), "\n")
+cat("Missing affect columns:", paste(setdiff(unlist(affect_items), names(gallup_world)), collapse = ", "), "\n")
+
+# First, extract number of PA/NA questions asked at country-year level
+affect_questions_asked
+
+# Check which PA and NA variables are consistently asked across all country-years
+consistent_affect_items <- affect_questions_asked %>%
+  group_by(AFFECT_TYPE) %>%
+  summarise(
+    total_country_years = n_distinct(paste(COUNTRYNEW, YEAR_INTERVIEW)),
+    .groups = "drop"
+  )
+
+# Get the total number of unique country-years in the dataset
+total_country_years <- gallup_world %>%
+  distinct(COUNTRYNEW, YEAR_INTERVIEW) %>%
+  nrow()
+
+cat("Total country-years in dataset:", total_country_years, "\n")
+print(consistent_affect_items)
+
+# Check consistency by individual items - need to check where questions were NOT missing
+item_consistency <- gallup_world %>%
+  select(COUNTRYNEW, YEAR_INTERVIEW, all_of(available_affect_cols)) %>%
+  pivot_longer(
+    cols = all_of(available_affect_cols),
+    names_to = "AFFECT_ITEM",
+    values_to = "RESPONSE"
+  ) %>%
+  mutate(
+    AFFECT_TYPE = case_when(
+      AFFECT_ITEM %in% affect_items$POSITIVE ~ "POSITIVE_AFFECT",
+      AFFECT_ITEM %in% affect_items$NEGATIVE ~ "NEGATIVE_AFFECT"
+    ),
+    was_asked = !is.na(RESPONSE) # TRUE if question was asked (not missing)
+  ) %>%
+  group_by(AFFECT_ITEM, AFFECT_TYPE) %>%
+  summarise(
+    n_country_years_asked = n_distinct(paste(COUNTRYNEW[was_asked], YEAR_INTERVIEW[was_asked])),
+    n_total_country_years = n_distinct(paste(COUNTRYNEW, YEAR_INTERVIEW)),
+    prop_coverage = round(n_country_years_asked / total_country_years, 5),
+    .groups = "drop"
+  ) %>%
+  arrange(desc(prop_coverage))
+
+# Now extract number of PA/NA questions asked at country-year level
+affect_questions_asked <- gallup_world %>%
+  select(COUNTRYNEW, YEAR_INTERVIEW, any_of(available_affect_cols)) %>%
+  tidyr::pivot_longer(
+    cols = available_affect_cols,
+    names_to = "AFFECT_ITEM",
+    values_to = "RESPONSE"
+  ) %>%
+  mutate(
+    AFFECT_TYPE = case_when(
+      AFFECT_ITEM %in% affect_items$POSITIVE ~ "POSITIVE_AFFECT",
+      AFFECT_ITEM %in% affect_items$NEGATIVE ~ "NEGATIVE_AFFECT"
+    )
+  ) %>%
+  group_by(COUNTRYNEW, YEAR_INTERVIEW, AFFECT_TYPE, AFFECT_ITEM) %>%
+  summarise(
+    n_asked = sum(!is.na(RESPONSE)),
+    .groups = "drop"
+  ) %>%
+  filter(n_asked > 0) %>% # Only keep items that were actually asked
+  group_by(COUNTRYNEW, YEAR_INTERVIEW, AFFECT_TYPE) %>%
+  summarise(
+    n_items_asked = n(),
+    items_asked = paste(AFFECT_ITEM, collapse = ", "),
+    .groups = "drop"
+  )
+
+affect_questions_asked
+
+# Check which PA and NA variables are consistently asked across all country-years
+consistent_affect_items <- affect_questions_asked %>%
+  group_by(AFFECT_TYPE) %>%
+  summarise(
+    total_country_years = n_distinct(paste(COUNTRYNEW, YEAR_INTERVIEW)),
+    .groups = "drop"
+  )
+
+# Get the total number of unique country-years in the dataset
+total_country_years <- gallup_world %>%
+  distinct(COUNTRYNEW, YEAR_INTERVIEW) %>%
+  nrow()
+
+cat("Total country-years in dataset:", total_country_years, "\n")
+print(consistent_affect_items)
+
+# Check consistency by individual items - need to check where questions were NOT missing
+item_consistency <- gallup_world %>%
+  select(COUNTRYNEW, YEAR_INTERVIEW, all_of(available_affect_cols)) %>%
+  pivot_longer(
+    cols = all_of(available_affect_cols),
+    names_to = "AFFECT_ITEM",
+    values_to = "RESPONSE"
+  ) %>%
+  mutate(
+    AFFECT_TYPE = case_when(
+      AFFECT_ITEM %in% affect_items$POSITIVE ~ "POSITIVE_AFFECT",
+      AFFECT_ITEM %in% affect_items$NEGATIVE ~ "NEGATIVE_AFFECT"
+    ),
+    was_asked = !is.na(RESPONSE) # TRUE if question was asked (not missing)
+  ) %>%
+  group_by(AFFECT_ITEM, AFFECT_TYPE) %>%
+  summarise(
+    n_country_years_asked = n_distinct(paste(COUNTRYNEW[was_asked], YEAR_INTERVIEW[was_asked])),
+    n_total_country_years = n_distinct(paste(COUNTRYNEW, YEAR_INTERVIEW)),
+    prop_coverage = round(n_country_years_asked / total_country_years, 5),
+    .groups = "drop"
+  ) %>%
+  arrange(desc(prop_coverage))
+
+cat("\nItem-level consistency (proportion of country-years where each item was asked):\n")
+print(item_consistency, n = Inf)
+item_consistency %>% select(-n_total_country_years)
+
+############################################################################################################
+# Now let's create the composite variables for positive and negative affect
+# (proportion of affirmative answers over the total number of questions asked)
+
+# First we remove the items that were asked in less than 15% of the country-years
+high_coverage_items <- item_consistency %>%
+  filter(prop_coverage > 0.15) %>%
+  pull(AFFECT_ITEM)
+
+# Separate into positive and negative items with high coverage
+positive_items_filtered <- intersect(affect_items$POSITIVE, high_coverage_items)
+negative_items_filtered <- intersect(affect_items$NEGATIVE, high_coverage_items)
+
+cat("High coverage positive affect items:", paste(positive_items_filtered, collapse = ", "), "\n") # WP60, WP61, WP63, WP65, WP67
+cat("High coverage negative affect items:", paste(negative_items_filtered, collapse = ", "), "\n") # WP68, WP69, WP70, WP71, WP74
+
+# Now create the composite variables for positive and negative affect at individual level
+gallup_world <- gallup_world %>%
+  mutate(
+    # Count number of positive affect questions answered "yes" (1)
+    POSITIVE_AFFECT_SUM = rowSums(select(., all_of(positive_items_filtered)) == 1, na.rm = TRUE),
+    # Count number of positive affect questions that were asked (not NA)
+    POSITIVE_AFFECT_N = rowSums(!is.na(select(., all_of(positive_items_filtered)))),
+    # Proportion of positive affect
+    POSITIVE_AFFECT = ifelse(POSITIVE_AFFECT_N > 0, POSITIVE_AFFECT_SUM / POSITIVE_AFFECT_N, NA),
+
+    # Count number of negative affect questions answered "yes" (1)
+    NEGATIVE_AFFECT_SUM = rowSums(select(., all_of(negative_items_filtered)) == 1, na.rm = TRUE),
+    # Count number of negative affect questions that were asked (not NA)
+    NEGATIVE_AFFECT_N = rowSums(!is.na(select(., all_of(negative_items_filtered)))),
+    # Proportion of negative affect
+    NEGATIVE_AFFECT = ifelse(NEGATIVE_AFFECT_N > 0, NEGATIVE_AFFECT_SUM / NEGATIVE_AFFECT_N, NA)
+  )
+
+# Check the results
+gallup_world %>%
+  select(
+    COUNTRYNEW, YEAR_INTERVIEW, POSITIVE_AFFECT, NEGATIVE_AFFECT,
+    POSITIVE_AFFECT_N, NEGATIVE_AFFECT_N
+  ) %>%
+  head(10)
+
+
+# Extracting Myanmar data---------
 gallup_myanmar <- gallup_world %>%
   mutate(REGION_MMR = case_when(
     REGION_MMR == 1 ~ "Chin State",
@@ -213,20 +373,25 @@ gallup_myanmar <- gallup_world %>%
   mutate(mid_date = mean(WP4, na.rm = TRUE)) %>%
   ungroup()
 
-nrow(gallup_myanmar) # 11760
+nrow(gallup_myanmar) # 13800
 
-saveRDS(gallup_myanmar, "data/GWP_myanmar_2014_2024.rds")
+table(gallup_myanmar$YEAR_INTERVIEW)
 
-gallup_myanmar <- readRDS("data/GWP_myanmar_2014_2024.rds")
-nrow(gallup_myanmar) # 11760
+saveRDS(gallup_world, "data/GWP_world_2012_2024_20251120.rds")
+saveRDS(gallup_myanmar, "data/GWP_myanmar_2012_2024_20251120.rds")
 
-
+# Reading the data from the RDS files-------------------------------
+gallup_myanmar <- readRDS("data/GWP_myanmar_2012_2024_20251120.rds")
+gallup_world <- readRDS("data/GWP_world_2012_2024_20251120.rds")
 
 # Sample sizes considerations---------
 # Getting the total and average sample size for by AFTER_COUP
 gallup_myanmar %>%
   group_by(AFTER_COUP) %>%
-  summarise(total_sample_size = sum(WGT, na.rm = TRUE), no_of_years_surveyed = n_distinct(YEAR_INTERVIEW), mean_sample_size = total_sample_size / no_of_years_surveyed)
+  summarise(
+    total_sample_size = sum(WGT, na.rm = TRUE),
+    no_of_years_surveyed = n_distinct(YEAR_INTERVIEW), mean_sample_size = total_sample_size / no_of_years_surveyed
+  )
 
 # Sample size by region and save as a table in csv
 gallup_myanmar %>%
