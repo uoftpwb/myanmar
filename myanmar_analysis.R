@@ -328,7 +328,6 @@ gallup_world %>%
   ) %>%
   head(10)
 
-
 # Extracting Myanmar data---------
 gallup_myanmar <- gallup_world %>%
   mutate(REGION_MMR = case_when(
@@ -465,7 +464,7 @@ myanmar_SWB_plot <- SWB_myanmar_long %>%
   geom_ribbon(alpha = 0.2, aes(fill = variable), size = 0) +
   scale_color_manual(values = c("#e76f51", "#2a9d8f"), labels = c("Life Satisfaction", "Hope"), name = "") +
   scale_fill_manual(values = c("#e76f51", "#2a9d8f"), labels = c("Life Satisfaction", "Hope"), name = "") +
-  scale_x_date(date_breaks = "1 year", date_labels = "%Y", limits = as.Date(c("2014-01-01", "2024-12-31")), expand = c(0, 0)) +
+  scale_x_date(date_breaks = "1 year", date_labels = "%Y", limits = as.Date(c("2012-01-01", "2024-12-31")), expand = c(0, 0)) +
   scale_y_continuous(limits = c(0, 10), expand = c(0, 0), breaks = seq(0, 10, 1)) +
   theme_classic() +
   theme_classic(base_size = 14) +
@@ -483,78 +482,50 @@ myanmar_SWB_plot <- SWB_myanmar_long %>%
     legend.title = element_text(size = 14, face = "bold"),
     plot.title = element_text(size = 14, face = "bold", hjust = 0.5)
   ) +
-  labs(x = "Year", y = "Mean Well-being Score (0-10)", title = "Mean Life Satisfaction and Hope in Myanmar, 2014-2024\n")
+  labs(x = "Year", y = "Mean Well-being Score (0-10)", title = "Mean Life Satisfaction and Hope in Myanmar, 2012-2024\n")
 
 myanmar_SWB_plot
 
-ggsave("figures/myanmar_SWB_plot.png", myanmar_SWB_plot, width = 12, height = 8)
-
+ggsave("figures/myanmar_SWB_plot.png", myanmar_SWB_plot, width = 14, height = 8)
+# ggsave("figures/myanmar_SWB_plot.pdf", myanmar_SWB_plot, width = 14, height = 8)
 
 # Affective well-being ---------------------------------------------------------
-Affective_myanmar <- gallup_myanmar %>%
-  group_by(mid_date) %>%
+
+# Now we estimated the weighted % of positive and negative affect at the country-year level
+# using the total number of questions asked in each country-year as the denominator
+myanmar_affective_data <- gallup_myanmar %>%
+  group_by(YEAR_INTERVIEW) %>%
   summarise(
-    smile_mean = stats::weighted.mean(WP63, WGT, na.rm = TRUE), # Happiness
-    smile_se = sqrt(smile_mean * (1 - smile_mean) / sum(WGT, na.rm = TRUE)),
-    enjoy_mean = stats::weighted.mean(WP67, WGT, na.rm = TRUE), # Joy
-    enjoy_se = sqrt(enjoy_mean * (1 - enjoy_mean) / sum(WGT, na.rm = TRUE)),
-    worry_mean = stats::weighted.mean(WP69, WGT, na.rm = TRUE), # Worry
-    worry_se = sqrt(worry_mean * (1 - worry_mean) / sum(WGT, na.rm = TRUE)),
-    sad_mean = stats::weighted.mean(WP70, WGT, na.rm = TRUE), # Sadness
-    sad_se = sqrt(sad_mean * (1 - sad_mean) / sum(WGT, na.rm = TRUE)),
-    stress_mean = stats::weighted.mean(WP71, WGT, na.rm = TRUE), # Stress
-    stress_se = sqrt(stress_mean * (1 - stress_mean) / sum(WGT, na.rm = TRUE)),
-    anger_mean = stats::weighted.mean(WP74, WGT, na.rm = TRUE), # Anger
-    anger_se = sqrt(anger_mean * (1 - anger_mean) / sum(WGT, na.rm = TRUE))
+    POSITIVE_AFFECT_mean = stats::weighted.mean(POSITIVE_AFFECT, WGT, na.rm = TRUE),
+    POSITIVE_AFFECT_se = sqrt(Hmisc::wtd.var(POSITIVE_AFFECT, WGT, na.rm = TRUE) / sum(WGT, na.rm = TRUE)),
+    NEGATIVE_AFFECT_mean = stats::weighted.mean(NEGATIVE_AFFECT, WGT, na.rm = TRUE),
+    NEGATIVE_AFFECT_se = sqrt(Hmisc::wtd.var(NEGATIVE_AFFECT, WGT, na.rm = TRUE) / sum(WGT, na.rm = TRUE)),
+    YEAR_INTERVIEW = first(YEAR_INTERVIEW[!is.na(YEAR_INTERVIEW)]),
+    mid_date = first(mid_date[!is.na(mid_date)])
   ) %>%
   mutate(
-    smile_lowci = smile_mean - 1.96 * smile_se,
-    smile_upci = smile_mean + 1.96 * smile_se,
-    enjoy_lowci = enjoy_mean - 1.96 * enjoy_se,
-    enjoy_upci = enjoy_mean + 1.96 * enjoy_se,
-    worry_lowci = worry_mean - 1.96 * worry_se,
-    worry_upci = worry_mean + 1.96 * worry_se,
-    sad_lowci = sad_mean - 1.96 * sad_se,
-    sad_upci = sad_mean + 1.96 * sad_se,
-    stress_lowci = stress_mean - 1.96 * stress_se,
-    stress_upci = stress_mean + 1.96 * stress_se,
-    anger_lowci = anger_mean - 1.96 * anger_se,
-    anger_upci = anger_mean + 1.96 * anger_se
+    POSITIVE_AFFECT_lowci = POSITIVE_AFFECT_mean - 1.96 * POSITIVE_AFFECT_se,
+    POSITIVE_AFFECT_upci = POSITIVE_AFFECT_mean + 1.96 * POSITIVE_AFFECT_se,
+    NEGATIVE_AFFECT_lowci = NEGATIVE_AFFECT_mean - 1.96 * NEGATIVE_AFFECT_se,
+    NEGATIVE_AFFECT_upci = NEGATIVE_AFFECT_mean + 1.96 * NEGATIVE_AFFECT_se
   ) %>%
-  select(mid_date, smile_mean, smile_lowci, smile_upci, enjoy_mean, enjoy_lowci, enjoy_upci, worry_mean, worry_lowci, worry_upci, sad_mean, sad_lowci, sad_upci, stress_mean, stress_lowci, stress_upci, anger_mean, anger_lowci, anger_upci)
-
-Affective_myanmar
-
-# Pivoting the data to long format
-Affective_myanmar_long <- Affective_myanmar %>%
+  select(YEAR_INTERVIEW, mid_date, POSITIVE_AFFECT_mean, POSITIVE_AFFECT_lowci, POSITIVE_AFFECT_upci, NEGATIVE_AFFECT_mean, NEGATIVE_AFFECT_lowci, NEGATIVE_AFFECT_upci) %>%
   pivot_longer(
-    cols = c(
-      smile_mean, smile_lowci, smile_upci,
-      enjoy_mean, enjoy_lowci, enjoy_upci,
-      worry_mean, worry_lowci, worry_upci,
-      sad_mean, sad_lowci, sad_upci,
-      stress_mean, stress_lowci, stress_upci,
-      anger_mean, anger_lowci, anger_upci
-    ),
+    cols = c(POSITIVE_AFFECT_mean, POSITIVE_AFFECT_lowci, POSITIVE_AFFECT_upci, NEGATIVE_AFFECT_mean, NEGATIVE_AFFECT_lowci, NEGATIVE_AFFECT_upci),
     names_to = c("variable", "statistic"),
-    names_pattern = "(smile|enjoy|worry|sad|stress|anger)_(mean|lowci|upci)",
+    names_pattern = "(POSITIVE_AFFECT|NEGATIVE_AFFECT)_(mean|lowci|upci)",
     values_to = "value"
   ) %>%
-  pivot_wider(
-    names_from = statistic,
-    values_from = value
-  ) %>%
+  pivot_wider(names_from = statistic, values_from = value) %>%
   mutate(variable = case_when(
-    variable == "smile" ~ "Smiling",
-    variable == "enjoy" ~ "Enjoyment",
-    variable == "worry" ~ "Worry",
-    variable == "sad" ~ "Sadness",
-    variable == "stress" ~ "Stress",
-    variable == "anger" ~ "Anger"
+    variable == "POSITIVE_AFFECT" ~ "Positive Affect",
+    variable == "NEGATIVE_AFFECT" ~ "Negative Affect"
   )) %>%
-  mutate(variable = factor(variable, levels = c("Smiling", "Enjoyment", "Worry", "Sadness", "Stress", "Anger")))
+  mutate(variable = factor(variable, levels = c("Positive Affect", "Negative Affect")))
 
-myanmar_Affective_plot <- Affective_myanmar_long %>%
+print(myanmar_affective_data)
+
+myanmar_Affective_plot <- myanmar_affective_data %>%
   mutate(mean = mean * 100, lowci = lowci * 100, upci = upci * 100) %>%
   ggplot(aes(x = mid_date, y = mean, ymin = lowci, ymax = upci, color = variable, group = variable)) +
   geom_vline(xintercept = as.Date("2015-11-08"), linetype = "dotted", color = "black") +
@@ -564,9 +535,9 @@ myanmar_Affective_plot <- Affective_myanmar_long %>%
   geom_point(size = 2) +
   geom_line(size = 1) +
   geom_ribbon(alpha = 0.2, aes(fill = variable), size = 0) +
-  scale_color_manual(values = c("#f4a261", "#2a9d8f", "#e9c46a", "#264653", "#e76f51", "#d62828"), labels = c("Smiling", "Enjoyment", "Worry", "Sadness", "Stress", "Anger"), name = "Affect") +
-  scale_fill_manual(values = c("#f4a261", "#2a9d8f", "#e9c46a", "#264653", "#e76f51", "#d62828"), labels = c("Smiling", "Enjoyment", "Worry", "Sadness", "Stress", "Anger"), name = "Affect") +
-  scale_x_date(date_breaks = "1 year", date_labels = "%Y", limits = as.Date(c("2014-01-01", "2024-12-31")), expand = c(0, 0)) +
+  scale_color_manual(values = c("#f4a261", "#2a9d8f"), labels = c("Positive Affect", "Negative Affect"), name = "Affect") +
+  scale_fill_manual(values = c("#f4a261", "#2a9d8f"), labels = c("Positive Affect", "Negative Affect"), name = "Affect") +
+  scale_x_date(date_breaks = "1 year", date_labels = "%Y", limits = as.Date(c("2012-01-01", "2024-12-31")), expand = c(0, 0)) +
   scale_y_continuous(limits = c(0, 100), expand = c(0, 0), breaks = seq(0, 100, 10)) +
   theme_classic(base_size = 14) +
   theme(
@@ -584,16 +555,16 @@ myanmar_Affective_plot <- Affective_myanmar_long %>%
     legend.background = element_blank(),
     plot.title = element_text(size = 14, face = "bold", hjust = 0.5)
   ) +
-  labs(x = "Year", y = "Proportion of Respondents Feeling Each Affect", title = "Affective Well-being in Myanmar, 2014-2024\n")
+  labs(x = "Year", y = "Proportion of Respondents Feeling Each Affect (%)", title = "Proportion of Respondents Feeling Positive and Negative Affect in Myanmar, 2012-2024\n")
 
 myanmar_Affective_plot
 
-ggsave("figures/myanmar_Affective_plot.png", myanmar_Affective_plot, width = 12, height = 8)
+ggsave("figures/myanmar_Affective_plot.png", myanmar_Affective_plot, width = 14, height = 8)
+ggsave("figures/myanmar_Affective_plot.png", myanmar_Affective_plot, width = 14, height = 8)
 
 
 # Descriptives of moderators ---------------------------------------------------
 objects(gallup_myanmar)
-
 
 ## Living necessities and living standards -------------------------------------
 
@@ -631,7 +602,7 @@ myanmar_desc_not_enough_food_shelter_plot <- gallup_myanmar %>%
   geom_line(size = 1) +
   geom_ribbon(alpha = 0.2, aes(ymin = lowci * 100, ymax = upci * 100, fill = variable), size = 0) +
   scale_y_continuous(limits = c(0, 100), expand = c(0, 0), breaks = seq(0, 100, 10)) +
-  scale_x_date(date_breaks = "1 year", date_labels = "%Y", limits = as.Date(c("2014-01-01", "2024-12-31"))) +
+  scale_x_date(date_breaks = "1 year", date_labels = "%Y", limits = as.Date(c("2012-01-01", "2024-12-31"))) +
   scale_color_manual(values = c("#f4a261", "#2a9d8f"), labels = c("Not enough food", "Not enough shelter"), name = "") +
   scale_fill_manual(values = c("#f4a261", "#2a9d8f"), labels = c("Not enough food", "Not enough shelter"), name = "") +
   theme_classic(base_size = 14) +
@@ -652,12 +623,12 @@ myanmar_desc_not_enough_food_shelter_plot <- gallup_myanmar %>%
   ) +
   labs(
     x = "Year", y = "Proportion of Respondents",
-    title = "Not enough food or shelter at least one day in the past 12 monthsin Myanmar, 2014-2024\n"
+    title = "Not enough food or shelter at least one day in the past 12 monthsin Myanmar, 2012-2024\n"
   )
 
 myanmar_desc_not_enough_food_shelter_plot
 
-ggsave("figures/myanmar_desc_not_enough_food_shelter_plot.png", myanmar_desc_not_enough_food_shelter_plot, width = 12, height = 7)
+ggsave("figures/myanmar_desc_not_enough_food_shelter_plot.png", myanmar_desc_not_enough_food_shelter_plot, width = 14, height = 7)
 
 # Mean over time of not enough food and shelter
 gallup_myanmar %>%
@@ -671,6 +642,7 @@ gallup_myanmar %>%
     food_mean = food_mean * 100, food_se = food_se * 100,
     shelter_mean = shelter_mean * 100, shelter_se = shelter_se * 100
   )
+
 ## Living standard (WP30) ------------------------------------------------------
 
 myanmar_desc_living_standard_plot <- gallup_myanmar %>%
@@ -688,7 +660,7 @@ myanmar_desc_living_standard_plot <- gallup_myanmar %>%
   geom_point(size = 2, color = "#219ebc") +
   geom_line(size = 1, color = "#219ebc") +
   geom_ribbon(alpha = 0.2, aes(ymin = lowci * 100, ymax = upci * 100), fill = "#219ebc", size = 0) +
-  scale_x_date(date_breaks = "1 year", date_labels = "%Y", limits = as.Date(c("2014-01-01", "2024-12-31"))) +
+  scale_x_date(date_breaks = "1 year", date_labels = "%Y", limits = as.Date(c("2012-01-01", "2024-12-31"))) +
   scale_y_continuous(limits = c(0, 100), expand = c(0, 0), breaks = seq(0, 100, 10)) +
   theme_classic(base_size = 14) +
   theme(
@@ -708,12 +680,12 @@ myanmar_desc_living_standard_plot <- gallup_myanmar %>%
   ) +
   labs(
     x = "Year", y = "Proportion of Respondents",
-    title = "Dissatisfaction with living standards in Myanmar, 2014-2024\n"
+    title = "Dissatisfaction with living standards in Myanmar, 2012-2024\n"
   )
 
 myanmar_desc_living_standard_plot
 
-ggsave("figures/myanmar_desc_living_standard_plot.png", myanmar_desc_living_standard_plot, width = 12, height = 7)
+ggsave("figures/myanmar_desc_living_standard_plot.png", myanmar_desc_living_standard_plot, width = 14, height = 7)
 
 # Mean over time of living standard
 gallup_myanmar %>%
@@ -724,7 +696,7 @@ gallup_myanmar %>%
   mutate(mean = mean * 100, se = se * 100)
 
 
-## Benevolence of People --------------------------------------------------------
+## Prosociality --------------------------------------------------------
 
 ### Donating Money (WP108), Volunteering (WP109), Helping Strangers (WP110) ------------------------------------------------------
 
@@ -780,7 +752,7 @@ myanmar_desc_benevolence_plot <- gallup_myanmar %>%
   geom_point(size = 2) +
   geom_line(size = 1) +
   geom_ribbon(alpha = 0.2, aes(ymin = lowci * 100, ymax = upci * 100, fill = variable), size = 0) +
-  scale_x_date(date_breaks = "1 year", date_labels = "%Y", limits = as.Date(c("2014-01-01", "2024-12-31"))) +
+  scale_x_date(date_breaks = "1 year", date_labels = "%Y", limits = as.Date(c("2012-01-01", "2024-12-31"))) +
   scale_y_continuous(limits = c(0, 100), expand = c(0, 0), breaks = seq(0, 100, 10)) +
   scale_color_manual(values = c("#ee9b00", "#9a031e", "#005f73"), labels = c("Donating Money", "Helping Others", "Volunteering"), name = "") +
   scale_fill_manual(values = c("#ee9b00", "#9a031e", "#005f73"), labels = c("Donating Money", "Helping Others", "Volunteering"), name = "") +
@@ -802,13 +774,56 @@ myanmar_desc_benevolence_plot <- gallup_myanmar %>%
   ) +
   labs(
     x = "Year", y = "Proportion of Respondents",
-    title = "Benevolence of People in Myanmar, 2014-2024\n"
+    title = "Benevolence of People in Myanmar, 2012-2024\n"
   )
 
 myanmar_desc_benevolence_plot
 
-ggsave("figures/myanmar_desc_benevolence_plot.png", myanmar_desc_benevolence_plot, width = 12, height = 7)
+ggsave("figures/myanmar_desc_benevolence_plot.png", myanmar_desc_benevolence_plot, width = 14, height = 7)
 
+
+#Let's do a version of any prosocial acts in the last 12 months
+
+#myanmar_desc_any_benevolence_plot <-
+ gallup_myanmar %>%
+  select(mid_date, WP108, WP109, WP110, WGT) %>%
+  filter(!is.na(WP108) & !is.na(WP109) & !is.na(WP110) & !is.na(WGT)) %>%
+  mutate(any_prosociality = ifelse(WP108 == 1| WP109 ==1| WP110 == 1, 1, 0)) %>%
+  group_by(mid_date) %>%
+  summarise(any_prosociality = sum(any_prosociality, na.rm = TRUE) / sum(WGT, na.rm = TRUE) * 100, 
+  any_prosociality_se = sqrt(any_prosociality * (1 - any_prosociality) / sum(WGT, na.rm = TRUE))) %>%
+  mutate(
+    any_prosociality_lowci = any_prosociality - 1.96 * any_prosociality_se,
+    any_prosociality_upci = any_prosociality + 1.96 * any_prosociality_se
+  ) %>%
+  select(mid_date, any_prosociality, any_prosociality_lowci, any_prosociality_upci) %>%
+  # Plotting the data
+  ggplot(aes(x = mid_date, y = any_prosociality * 100)) +
+  geom_point(size = 2) +
+  geom_line(size = 1) +
+  geom_ribbon(alpha = 0.2, aes(ymin = any_prosoiality_lowci * 100, ymax = any_prosoiality_upci * 100), size = 0) +
+  scale_x_date(date_breaks = "1 year", date_labels = "%Y", limits = as.Date(c("2012-01-01", "2024-12-31"))) +
+  scale_y_continuous(limits = c(0, 100), expand = c(0, 0), breaks = seq(0, 100, 10)) +
+  theme_classic(base_size = 14) +
+  theme(
+    axis.ticks.x = element_line(color = "black"),
+    axis.text.x = element_text(hjust = 0.5, color = "black", size = 14),
+    axis.text.y = element_text(hjust = 0.5, color = "black", size = 14),
+    axis.text.x.top = element_text(size = 14, face = "bold"),
+    plot.margin = unit(c(0.5, 1.2, -1, 0.3), "lines"),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    legend.position = c(0.9, 0.13),
+    axis.title = element_text(size = 14, face = "bold"),
+    legend.text = element_text(size = 12),
+    legend.title = element_blank(),
+    legend.background = element_blank(),
+    plot.title = element_text(size = 14, face = "bold", hjust = 0.5)
+  ) +
+  labs(
+    x = "Year", y = "Proportion of Respondents",
+    title = "Any Prosocial Acts in the Last 12 Months in Myanmar, 2012-2024\n"
+  )
 
 
 ## Confidence in national institutions ------------------------------------------
@@ -859,7 +874,7 @@ myanmar_desc_confidence_in_institutions_plot <- gallup_myanmar %>%
   geom_point(size = 2) +
   geom_line(size = 1) +
   geom_ribbon(alpha = 0.2, aes(fill = variable), size = 0) +
-  scale_x_date(date_breaks = "1 year", date_labels = "%Y", limits = as.Date(c("2014-01-01", "2024-12-31"))) +
+  scale_x_date(date_breaks = "1 year", date_labels = "%Y", limits = as.Date(c("2012-01-01", "2024-12-31"))) +
   scale_y_continuous(limits = c(0, 100), expand = c(0, 0), breaks = seq(0, 100, 10)) +
   scale_color_manual(values = c("#e76f51", "#2a9d8f", "#264653", "#ffb703"), labels = c("Judicial System", "National Government", "Honesty of Election", "Head of State"), name = "") +
   scale_fill_manual(values = c("#e76f51", "#2a9d8f", "#264653", "#ffb703"), labels = c("Judicial System", "National Government", "Honesty of Election", "Head of State"), name = "") +
@@ -881,12 +896,12 @@ myanmar_desc_confidence_in_institutions_plot <- gallup_myanmar %>%
   ) +
   labs(
     x = "Year", y = "Proportion of Respondents Agreeing",
-    title = "Confidence in National Institutions in Myanmar, 2014-2024\n"
+    title = "Confidence in National Institutions in Myanmar, 2012-2024\n"
   )
 
 myanmar_desc_confidence_in_institutions_plot
 
-ggsave("figures/myanmar_desc_confidence_in_institutions_plot.png", myanmar_desc_confidence_in_institutions_plot, width = 12, height = 7)
+ggsave("figures/myanmar_desc_confidence_in_institutions_plot.png", myanmar_desc_confidence_in_institutions_plot, width = 14, height = 7)
 
 # Mean over time of confidence in judicial system, national government, and honesty of election,
 gallup_myanmar %>%
@@ -925,7 +940,7 @@ gallup_myanmar %>%
 #   geom_point(size = 2, color = "#3d348b") +
 #   geom_line(size = 1, color = "#3d348b") +
 #   geom_ribbon(aes(ymin = lowci*100, ymax = upci*100), alpha = 0.2, fill = "#3d348b") +
-#   scale_x_date(date_breaks = "1 year", date_labels = "%Y", limits = as.Date(c("2014-01-01", "2024-12-31"))) +
+#   scale_x_date(date_breaks = "1 year", date_labels = "%Y", limits = as.Date(c("2012-01-01", "2024-12-31"))) +
 #   scale_y_continuous(limits = c(0, 100), expand = c(0, 0), breaks = seq(0, 100, 10)) +
 #   theme_classic(base_size = 14) +
 #   theme(
@@ -944,15 +959,14 @@ gallup_myanmar %>%
 #     plot.title = element_text(size = 14, face = 'bold', hjust = 0.5)
 #   ) +
 #   labs(x = "Year", y = "Proportion of Respondents",
-#   title = "Approving Job Performance of country leadership in Myanmar, 2014-2024\n")
+#   title = "Approving Job Performance of country leadership in Myanmar, 2012-2024\n")
 
 # myanmar_desc_approval_of_head_of_state_plot
 
-# ggsave("figures/myanmar_desc_approval_of_head_of_state_plot.png", myanmar_desc_approval_of_head_of_state_plot, width = 12, height = 8)
+# ggsave("figures/myanmar_desc_approval_of_head_of_state_plot.png", myanmar_desc_approval_of_head_of_state_plot, width = 14, height = 8)
 
 ### Perception of corruption in government (WP146) ------------------------------------------------------
 
-gallup_myanmar$WP146
 
 myanmar_desc_corruption_plot <- gallup_myanmar %>%
   filter(!is.na(WP146) & !is.na(WGT)) %>%
@@ -963,13 +977,13 @@ myanmar_desc_corruption_plot <- gallup_myanmar %>%
   # Plotting the data
   ggplot(aes(x = mid_date, y = mean * 100)) +
   geom_vline(xintercept = as.Date("2015-11-08"), linetype = "dotted", color = "black") +
-  annotate("text", x = as.Date("2016-01-08"), y = 5, label = "Myanmar General Elections on November 8th, 2015\nThe National League for Democracy won a supermajority.", vjust = -0.5, hjust = 0, size = 4, fontface = "bold") +
+  annotate("text", x = as.Date("2016-01-08"), y = 90, label = "Myanmar General Elections on November 8th, 2015\nThe National League for Democracy won a supermajority.", vjust = -0.5, hjust = 0, size = 4, fontface = "bold") +
   geom_vline(xintercept = as.Date("2021-02-01"), linetype = "dotted", color = "black") +
-  annotate("text", x = as.Date("2021-04-01"), y = 5, label = "The military launched the coup d'état\non February 1st, 2021", vjust = -0.5, hjust = 0, size = 4, fontface = "bold") +
+  annotate("text", x = as.Date("2021-04-01"), y = 90, label = "The military launched the coup d'état\non February 1st, 2021", vjust = -0.5, hjust = 0, size = 4, fontface = "bold") +
   geom_point(size = 2, color = "#723d46") +
   geom_line(size = 1, color = "#723d46") +
   geom_ribbon(aes(ymin = lowci * 100, ymax = upci * 100), alpha = 0.2, fill = "#723d46") +
-  scale_x_date(date_breaks = "1 year", date_labels = "%Y", limits = as.Date(c("2014-01-01", "2024-12-31"))) +
+  scale_x_date(date_breaks = "1 year", date_labels = "%Y", limits = as.Date(c("2012-01-01", "2024-12-31"))) +
   scale_y_continuous(limits = c(0, 100), expand = c(0, 0), breaks = seq(0, 100, 10)) +
   theme_classic(base_size = 14) +
   theme(
@@ -989,12 +1003,12 @@ myanmar_desc_corruption_plot <- gallup_myanmar %>%
   ) +
   labs(
     x = "Year", y = "Proportion of Respondents Agreeing",
-    title = "Perception of Widespread Corruption in Government in Myanmar, 2014-2024\n"
+    title = "Perception of Widespread Corruption in Government in Myanmar, 2012-2024\n"
   )
 
 myanmar_desc_corruption_plot
 
-ggsave("figures/myanmar_desc_corruption_plot.png", myanmar_desc_corruption_plot, width = 12, height = 8)
+ggsave("figures/myanmar_desc_corruption_plot.png", myanmar_desc_corruption_plot, width = 14, height = 8)
 
 
 # Mean of corruption over time
@@ -1023,7 +1037,7 @@ myanmar_desc_satisfaction_with_freedom_plot <- gallup_myanmar %>%
   geom_point(size = 2, color = "#415d43") +
   geom_line(size = 1, color = "#415d43") +
   geom_ribbon(aes(ymin = lowci * 100, ymax = upci * 100), alpha = 0.2, fill = "#415d43") +
-  scale_x_date(date_breaks = "1 year", date_labels = "%Y", limits = as.Date(c("2014-01-01", "2024-12-31"))) +
+  scale_x_date(date_breaks = "1 year", date_labels = "%Y", limits = as.Date(c("2012-01-01", "2024-12-31"))) +
   scale_y_continuous(limits = c(0, 100), expand = c(0, 0), breaks = seq(0, 100, 10)) +
   theme_classic(base_size = 14) +
   theme(
@@ -1043,12 +1057,12 @@ myanmar_desc_satisfaction_with_freedom_plot <- gallup_myanmar %>%
   ) +
   labs(
     x = "Year", y = "Proportion of Respondents Satisfied",
-    title = "Satisfaction with Freedom in Myanmar, 2014-2024\n"
+    title = "Satisfaction with Freedom in Myanmar, 2012-2024\n"
   )
 
 myanmar_desc_satisfaction_with_freedom_plot
 
-ggsave("figures/myanmar_desc_satisfaction_with_freedom_plot.png", myanmar_desc_satisfaction_with_freedom_plot, width = 12, height = 8)
+ggsave("figures/myanmar_desc_satisfaction_with_freedom_plot.png", myanmar_desc_satisfaction_with_freedom_plot, width = 14, height = 8)
 
 # Mean of satisfaction with freedom over time
 gallup_myanmar %>%
@@ -1083,7 +1097,7 @@ myanmar_desc_different_country_plot <- gallup_myanmar %>%
   geom_point(size = 2, color = "#05668d") +
   geom_line(size = 1, color = "#05668d") +
   geom_ribbon(aes(ymin = lowci * 100, ymax = upci * 100), alpha = 0.2, fill = "#05668d") +
-  scale_x_date(date_breaks = "1 year", date_labels = "%Y", limits = as.Date(c("2014-01-01", "2024-12-31"))) +
+  scale_x_date(date_breaks = "1 year", date_labels = "%Y", limits = as.Date(c("2012-01-01", "2024-12-31"))) +
   scale_y_continuous(limits = c(0, 100), expand = c(0, 0), breaks = seq(0, 100, 10)) +
   theme_classic(base_size = 14) +
   theme(
@@ -1103,12 +1117,12 @@ myanmar_desc_different_country_plot <- gallup_myanmar %>%
   ) +
   labs(
     x = "Year", y = "Proportion of Respondents",
-    title = "Would like to live in a different country in Myanmar, 2014-2024\n"
+    title = "Would like to live in a different country in Myanmar, 2012-2024\n"
   )
 
 myanmar_desc_different_country_plot
 
-ggsave("figures/myanmar_desc_different_country_plot.png", myanmar_desc_different_country_plot, width = 12, height = 8)
+ggsave("figures/myanmar_desc_different_country_plot.png", myanmar_desc_different_country_plot, width = 14, height = 8)
 
 
 # Mean of would like to live in a different country over time
@@ -1118,11 +1132,11 @@ gallup_myanmar %>%
   summarize(mean = sum(WGT[WP1325 == 1]) / sum(WGT), se = sqrt(mean * (1 - mean) / sum(WGT))) %>%
   mutate(mean = mean * 100, se = se * 100)
 
-### Distribution of religions (WP1233) in 2014 ----------------------------------
-# Get the weighted distribution of religions in 2014
+### Distribution of religions (WP1233) in 2012 ----------------------------------
+# Get the weighted distribution of religions in 2012
 # multiple the frequency by the weight
-myanmar_desc_distribution_of_religions_plot_2014 <- gallup_myanmar %>%
-  filter(YEAR_INTERVIEW == 2014) %>%
+myanmar_desc_distribution_of_religions_plot_2012 <- gallup_myanmar %>%
+  filter(YEAR_INTERVIEW == 2012) %>%
   filter(!is.na(WP1233)) %>%
   group_by(WP1233) %>%
   summarise(religion_sum = sum(WGT)) %>%
@@ -1180,10 +1194,11 @@ myanmar_desc_distribution_of_religions_plot_2014 <- gallup_myanmar %>%
   ) +
   labs(
     x = "Religion", y = "Proportion of Respondents",
-    title = "Distribution of Religions in Myanmar, 2014\n"
+    title = "Distribution of Religions in Myanmar, 2012\n"
   )
+myanmar_desc_distribution_of_religions_plot_2012
 
-ggsave("figures/myanmar_desc_distribution_of_religions_plot_2014.png", myanmar_desc_distribution_of_religions_plot_2014, width = 12, height = 8)
+ggsave("figures/myanmar_desc_distribution_of_religions_plot_2012.png", myanmar_desc_distribution_of_religions_plot_2012, width = 14, height = 8)
 
 # 2024
 myanmar_desc_distribution_of_religions_plot_2024 <- gallup_myanmar %>%
@@ -1247,12 +1262,12 @@ myanmar_desc_distribution_of_religions_plot_2024 <- gallup_myanmar %>%
     x = "Religion", y = "Proportion of Respondents",
     title = "Distribution of Religions in Myanmar, 2024\n"
   )
-
-ggsave("figures/myanmar_desc_distribution_of_religions_plot_2024.png", myanmar_desc_distribution_of_religions_plot_2024, width = 12, height = 8)
+myanmar_desc_distribution_of_religions_plot_2024
+ggsave("figures/myanmar_desc_distribution_of_religions_plot_2024.png", myanmar_desc_distribution_of_religions_plot_2024, width = 14, height = 8)
 
 ### Freedom of Media ------------------------------------------------------------
 myanmar_desc_freedom_of_media_plot <- gallup_myanmar %>%
-  group_by(YEAR_INTERVIEW) %>%
+  group_by(mid_date) %>% # Creating a mid interview date variable based on the survey date
   summarise(
     freedom_of_media_mean = stats::weighted.mean(WP10251, WGT, na.rm = TRUE),
     freedom_of_media_se = sqrt(Hmisc::wtd.var(WP10251, WGT, na.rm = TRUE) / sum(WGT, na.rm = TRUE))
@@ -1261,12 +1276,17 @@ myanmar_desc_freedom_of_media_plot <- gallup_myanmar %>%
     freedom_of_media_lowci = freedom_of_media_mean - 1.96 * freedom_of_media_se,
     freedom_of_media_upci = freedom_of_media_mean + 1.96 * freedom_of_media_se
   ) %>%
-  select(YEAR_INTERVIEW, freedom_of_media_mean, freedom_of_media_lowci, freedom_of_media_upci) %>%
+  select(mid_date, freedom_of_media_mean, freedom_of_media_lowci, freedom_of_media_upci) %>%
   # Plotting the data
-  ggplot(aes(x = YEAR_INTERVIEW, y = freedom_of_media_mean * 100)) +
-  geom_point() +
-  geom_errorbar(aes(ymin = freedom_of_media_lowci * 100, ymax = freedom_of_media_upci * 100), width = 0.2) +
-  scale_x_continuous(breaks = seq(2014, 2024, 1)) +
+  ggplot(aes(x = mid_date, y = freedom_of_media_mean * 100)) + # Creating a mid interview date variable based on the survey date
+  geom_vline(xintercept = as.Date("2015-11-08"), linetype = "dotted", color = "black") +
+  annotate("text", x = as.Date("2016-01-08"), y = 90, label = "Myanmar General Elections on November 8th, 2015\nThe National League for Democracy won a supermajority.", vjust = -0.5, hjust = 0, size = 4, fontface = "bold") +
+  geom_vline(xintercept = as.Date("2021-02-01"), linetype = "dotted", color = "black") +
+  annotate("text", x = as.Date("2021-04-01"), y = 90, label = "The military launched the coup d'état\non February 1st, 2021", vjust = -0.5, hjust = 0, size = 4, fontface = "bold") +
+  geom_point(size = 2, color = "#05668d") +
+  geom_line(size = 1, color = "#05668d") +
+  geom_ribbon(alpha = 0.2, aes(ymin = freedom_of_media_lowci * 100, ymax = freedom_of_media_upci * 100), fill = "#05668d") +
+  scale_x_date(date_breaks = "1 year", date_labels = "%Y", limits = as.Date(c("2012-01-01", "2024-12-31"))) +
   scale_y_continuous(limits = c(0, 100), expand = c(0, 0), breaks = seq(0, 100, 10)) +
   theme_classic(base_size = 14) +
   theme(
@@ -1280,23 +1300,24 @@ myanmar_desc_freedom_of_media_plot <- gallup_myanmar %>%
     legend.position = c(0.9, 0.13),
     axis.title = element_text(size = 14, face = "bold"),
     legend.text = element_text(size = 12),
-    legend.title = element_text(size = 12, face = "bold"),
+    legend.title = element_blank(),
     legend.background = element_blank(),
     plot.title = element_text(size = 14, face = "bold", hjust = 0.5)
   ) +
   labs(
     x = "Year", y = "Proportion of Respondents Feeling Freedom of Media",
-    title = "Freedom of Media in Myanmar, 2014-2024\n"
+    title = "Freedom of Media in Myanmar, 2012-2024\n"
   )
+myanmar_desc_freedom_of_media_plot
 
-ggsave("figures/myanmar_desc_freedom_of_media_plot.png", myanmar_desc_freedom_of_media_plot, width = 12, height = 8)
+ggsave("figures/myanmar_desc_freedom_of_media_plot.png", myanmar_desc_freedom_of_media_plot, width = 14, height = 8)
 
 ### Racial/Ethnic Minorities ----------------------------------------------------
 
 objects(gallup_myanmar)
 
 myanmar_desc_racial_ethnic_minorities_plot <- gallup_myanmar %>%
-  group_by(YEAR_INTERVIEW) %>%
+  group_by(mid_date) %>% # Creating a mid interview date variable based on the survey date
   summarise(
     racial_ethnic_minorities_mean = stats::weighted.mean(WP103, WGT, na.rm = TRUE),
     racial_ethnic_minorities_se = sqrt(Hmisc::wtd.var(WP103, WGT, na.rm = TRUE) / sum(WGT, na.rm = TRUE))
@@ -1305,12 +1326,17 @@ myanmar_desc_racial_ethnic_minorities_plot <- gallup_myanmar %>%
     racial_ethnic_minorities_lowci = racial_ethnic_minorities_mean - 1.96 * racial_ethnic_minorities_se,
     racial_ethnic_minorities_upci = racial_ethnic_minorities_mean + 1.96 * racial_ethnic_minorities_se
   ) %>%
-  select(YEAR_INTERVIEW, racial_ethnic_minorities_mean, racial_ethnic_minorities_lowci, racial_ethnic_minorities_upci) %>%
+  select(mid_date, racial_ethnic_minorities_mean, racial_ethnic_minorities_lowci, racial_ethnic_minorities_upci) %>%
   # Plotting the data
-  ggplot(aes(x = YEAR_INTERVIEW, y = racial_ethnic_minorities_mean * 100)) +
-  geom_point() +
-  geom_errorbar(aes(ymin = racial_ethnic_minorities_lowci * 100, ymax = racial_ethnic_minorities_upci * 100), width = 0.2) +
-  scale_x_continuous(breaks = seq(2014, 2024, 1)) +
+  ggplot(aes(x = mid_date, y = racial_ethnic_minorities_mean * 100)) +
+  geom_vline(xintercept = as.Date("2015-11-08"), linetype = "dotted", color = "black") +
+  annotate("text", x = as.Date("2016-01-08"), y = 10, label = "Myanmar General Elections on November 8th, 2015\nThe National League for Democracy won a supermajority.", vjust = -0.5, hjust = 0, size = 4, fontface = "bold") +
+  geom_vline(xintercept = as.Date("2021-02-01"), linetype = "dotted", color = "black") +
+  annotate("text", x = as.Date("2021-04-01"), y = 10, label = "The military launched the coup d'état\non February 1st, 2021", vjust = -0.5, hjust = 0, size = 4, fontface = "bold") +
+  geom_point(size = 2, color = "#05668d") +
+  geom_line(size = 1, color = "#05668d") +
+  geom_ribbon(alpha = 0.2, aes(ymin = racial_ethnic_minorities_lowci * 100, ymax = racial_ethnic_minorities_upci * 100), fill = "#05668d") +
+  scale_x_date(date_breaks = "1 year", date_labels = "%Y", limits = as.Date(c("2012-01-01", "2024-12-31"))) +
   scale_y_continuous(limits = c(0, 100), expand = c(0, 0), breaks = seq(0, 100, 10)) +
   theme_classic(base_size = 14) +
   theme(
@@ -1329,16 +1355,16 @@ myanmar_desc_racial_ethnic_minorities_plot <- gallup_myanmar %>%
     plot.title = element_text(size = 14, face = "bold", hjust = 0.5)
   ) +
   labs(
-    x = "Year", y = "Proportion of Respondents Agreeing",
-    title = "Friendliness of Their City/ Area to Racial/Ethnic Minorities in Myanmar, 2014-2024\n"
+    x = "Year", y = "Proportion of Respondents Feeling Friendliness",
+    title = "Friendliness of Their City/ Area to Racial/Ethnic Minorities in Myanmar, 2012-2024\n"
   )
-
-ggsave("figures/myanmar_desc_racial_ethnic_minorities_plot.png", myanmar_desc_racial_ethnic_minorities_plot, width = 12, height = 8)
+myanmar_desc_racial_ethnic_minorities_plot
+ggsave("figures/myanmar_desc_racial_ethnic_minorities_plot.png", myanmar_desc_racial_ethnic_minorities_plot, width = 14, height = 8)
 
 ### Importance of Religion (WP109) ------------------------------------------------------
 
 myanmar_desc_importance_religion_plot <- gallup_myanmar %>%
-  group_by(YEAR_INTERVIEW) %>%
+  group_by(mid_date) %>%
   summarise(
     importance_of_religion_mean = stats::weighted.mean(WP109, WGT, na.rm = TRUE),
     importance_of_religion_se = sqrt(Hmisc::wtd.var(WP109, WGT, na.rm = TRUE) / sum(WGT, na.rm = TRUE))
@@ -1347,12 +1373,17 @@ myanmar_desc_importance_religion_plot <- gallup_myanmar %>%
     importance_of_religion_lowci = importance_of_religion_mean - 1.96 * importance_of_religion_se,
     importance_of_religion_upci = importance_of_religion_mean + 1.96 * importance_of_religion_se
   ) %>%
-  select(YEAR_INTERVIEW, importance_of_religion_mean, importance_of_religion_lowci, importance_of_religion_upci) %>%
+  select(mid_date, importance_of_religion_mean, importance_of_religion_lowci, importance_of_religion_upci) %>%
   # Plotting the data
-  ggplot(aes(x = YEAR_INTERVIEW, y = importance_of_religion_mean * 100)) +
-  geom_point() +
-  geom_errorbar(aes(ymin = importance_of_religion_lowci * 100, ymax = importance_of_religion_upci * 100), width = 0.2) +
-  scale_x_continuous(breaks = seq(2014, 2024, 1)) +
+  ggplot(aes(x = mid_date, y = importance_of_religion_mean * 100)) +
+  geom_vline(xintercept = as.Date("2015-11-08"), linetype = "dotted", color = "black") +
+  annotate("text", x = as.Date("2016-01-08"), y = 10, label = "Myanmar General Elections on November 8th, 2015\nThe National League for Democracy won a supermajority.", vjust = -0.5, hjust = 0, size = 4, fontface = "bold") +
+  geom_vline(xintercept = as.Date("2021-02-01"), linetype = "dotted", color = "black") +
+  annotate("text", x = as.Date("2021-04-01"), y = 10, label = "The military launched the coup d'état\non February 1st, 2021", vjust = -0.5, hjust = 0, size = 4, fontface = "bold") +
+  geom_point(size = 2, color = "#05668d") +
+  geom_line(size = 1, color = "#05668d") +
+  geom_ribbon(alpha = 0.2, aes(ymin = importance_of_religion_lowci * 100, ymax = importance_of_religion_upci * 100), fill = "#05668d") +
+  scale_x_date(date_breaks = "1 year", date_labels = "%Y", limits = as.Date(c("2012-01-01", "2024-12-31"))) +
   scale_y_continuous(limits = c(0, 100), expand = c(0, 0), breaks = seq(0, 100, 10)) +
   theme_classic(base_size = 14) +
   theme(
@@ -1372,71 +1403,85 @@ myanmar_desc_importance_religion_plot <- gallup_myanmar %>%
   ) +
   labs(
     x = "Year", y = "Proportion of Respondents Agreeing",
-    title = "Importance of Religion in Myanmar, 2014-2024\n"
+    title = "Importance of Religion in Myanmar, 2012-2024\n"
   )
-ggsave("figures/myanmar_desc_importance_religion_plot.png", myanmar_desc_importance_religion_plot, width = 12, height = 8)
+
+myanmar_desc_importance_religion_plot
+
+ggsave("figures/myanmar_desc_importance_religion_plot.png", myanmar_desc_importance_religion_plot, width = 14, height = 8)
 
 
 
 ### Confidence in military (WP137), 2015-2020------------------------------------------------------
 
-table(gallup_myanmar$WP137)
+# table(gallup_myanmar$WP137)
 
 
-myanmar_desc_confidence_in_military_plot <- gallup_myanmar %>%
-  filter(!is.na(WP137)) %>%
-  group_by(YEAR_INTERVIEW) %>%
-  summarize(prop = sum(WGT[WP137 == "Yes"]) / sum(WGT), prop_se = sqrt(prop * (1 - prop) / sum(WGT))) %>%
-  mutate(prop_lowci = prop - 1.96 * prop_se, prop_upci = prop + 1.96 * prop_se) %>%
-  select(YEAR_INTERVIEW, prop, prop_lowci, prop_upci) %>%
-  # Plotting the data
-  ggplot(aes(x = YEAR_INTERVIEW, y = prop * 100)) +
-  geom_point() +
-  geom_errorbar(aes(ymin = prop_lowci * 100, ymax = prop_upci * 100), width = 0.15) +
-  scale_x_continuous(breaks = seq(2014, 2024, 1)) +
-  scale_y_continuous(limits = c(0, 100), expand = c(0, 0), breaks = seq(0, 100, 10)) +
-  theme_classic(base_size = 14) +
-  theme(
-    axis.ticks.x = element_line(color = "black"),
-    axis.text.x = element_text(hjust = 0.5, color = "black", size = 14),
-    axis.text.y = element_text(hjust = 0.5, color = "black", size = 14),
-    axis.text.x.top = element_text(size = 14, face = "bold"),
-    plot.margin = unit(c(0.5, 1.2, -1, 0.3), "lines"),
-    panel.grid.major = element_blank(),
-    panel.grid.minor = element_blank(),
-    legend.position = c(0.9, 0.13),
-    axis.title = element_text(size = 14, face = "bold"),
-    legend.text = element_text(size = 12),
-    legend.title = element_blank(),
-    legend.background = element_blank(),
-    plot.title = element_text(size = 14, face = "bold", hjust = 0.5)
-  ) +
-  labs(
-    x = "Year", y = "Proportion of Respondents Agreeing",
-    title = "Having Confidence in Military in Myanmar, 2014-2024\n"
-  )
+# myanmar_desc_confidence_in_military_plot <- gallup_myanmar %>%
+#   filter(!is.na(WP137)) %>%
+#   group_by(mid_date) %>%
+#   summarize(prop = sum(WGT[WP137 == "Yes"]) / sum(WGT), prop_se = sqrt(prop * (1 - prop) / sum(WGT))) %>%
+#   mutate(prop_lowci = prop - 1.96 * prop_se, prop_upci = prop + 1.96 * prop_se) %>%
+#   select(mid_date, prop, prop_lowci, prop_upci) %>%
+#   # Plotting the data
+#   ggplot(aes(x = mid_date, y = prop * 100)) +
+#   geom_vline(xintercept = as.Date("2015-11-08"), linetype = "dotted", color = "black") +
+#   annotate("text", x = as.Date("2016-01-08"), y = 10, label = "Myanmar General Elections on November 8th, 2015\nThe National League for Democracy won a supermajority.", vjust = -0.5, hjust = 0, size = 4, fontface = "bold") +
+#   geom_vline(xintercept = as.Date("2021-02-01"), linetype = "dotted", color = "black") +
+#   annotate("text", x = as.Date("2021-04-01"), y = 10, label = "The military launched the coup d'état\non February 1st, 2021", vjust = -0.5, hjust = 0, size = 4, fontface = "bold") +
+#   geom_point(size = 2, color = "#05668d") +
+#   geom_line(size = 1, color = "#05668d") +
+#   geom_ribbon(alpha = 0.2, aes(ymin = prop_lowci * 100, ymax = prop_upci * 100), fill = "#05668d") +
+#   scale_x_date(date_breaks = "1 year", date_labels = "%Y", limits = as.Date(c("2012-01-01", "2024-12-31"))) +
+#   scale_y_continuous(limits = c(0, 100), expand = c(0, 0), breaks = seq(0, 100, 10)) +
+#   theme_classic(base_size = 14) +
+#   theme(
+#     axis.ticks.x = element_line(color = "black"),
+#     axis.text.x = element_text(hjust = 0.5, color = "black", size = 14),
+#     axis.text.y = element_text(hjust = 0.5, color = "black", size = 14),
+#     axis.text.x.top = element_text(size = 14, face = "bold"),
+#     plot.margin = unit(c(0.5, 1.2, -1, 0.3), "lines"),
+#     panel.grid.major = element_blank(),
+#     panel.grid.minor = element_blank(),
+#     legend.position = c(0.9, 0.13),
+#     axis.title = element_text(size = 14, face = "bold"),
+#     legend.text = element_text(size = 12),
+#     legend.title = element_text(size = 12, face = "bold"),
+#     legend.background = element_blank(),
+#     plot.title = element_text(size = 14, face = "bold", hjust = 0.5)
+#   ) +
+#   labs(
+#     x = "Year", y = "Proportion of Respondents Agreeing",
+#     title = "Having Confidence in Military in Myanmar, 2012-2024\n"
+#   )
 
-ggsave("figures/myanmar_desc_confidence_in_military_plot.png", myanmar_desc_confidence_in_military_plot, width = 12, height = 8)
+# myanmar_desc_confidence_in_military_plot
+
+# ggsave("figures/myanmar_desc_confidence_in_military_plot.png", myanmar_desc_confidence_in_military_plot, width = 14, height = 8)
 
 
 
-## Social Support (WP27)
+## Social Support (WP27)-----------------------
 gallup_myanmar$WP27
 
 table(gallup_myanmar$WP27)
 
-
 myanmar_desc_social_support_plot <- gallup_myanmar %>%
   filter(!is.na(WP27)) %>%
-  group_by(YEAR_INTERVIEW) %>%
+  group_by(mid_date) %>%
   summarize(prop = sum(WGT[WP27 == "Yes"]) / sum(WGT), prop_se = sqrt(prop * (1 - prop) / sum(WGT))) %>%
   mutate(prop_lowci = prop - 1.96 * prop_se, prop_upci = prop + 1.96 * prop_se) %>%
-  select(YEAR_INTERVIEW, prop, prop_lowci, prop_upci) %>%
+  select(mid_date, prop, prop_lowci, prop_upci) %>%
   # Plotting the data
-  ggplot(aes(x = YEAR_INTERVIEW, y = prop * 100)) +
-  geom_point() +
-  geom_errorbar(aes(ymin = prop_lowci * 100, ymax = prop_upci * 100), width = 0.15) +
-  scale_x_continuous(breaks = seq(2014, 2024, 1)) +
+  ggplot(aes(x = mid_date, y = prop * 100)) +
+  geom_vline(xintercept = as.Date("2015-11-08"), linetype = "dotted", color = "black") +
+  annotate("text", x = as.Date("2016-01-08"), y = 10, label = "Myanmar General Elections on November 8th, 2015\nThe National League for Democracy won a supermajority.", vjust = -0.5, hjust = 0, size = 4, fontface = "bold") +
+  geom_vline(xintercept = as.Date("2021-02-01"), linetype = "dotted", color = "black") +
+  annotate("text", x = as.Date("2021-04-01"), y = 10, label = "The military launched the coup d'état\non February 1st, 2021", vjust = -0.5, hjust = 0, size = 4, fontface = "bold") +
+  geom_point(size = 2, color = "#05668d") +
+  geom_line(size = 1, color = "#05668d") +
+  geom_ribbon(alpha = 0.2, aes(ymin = prop_lowci * 100, ymax = prop_upci * 100), fill = "#05668d") +
+  scale_x_date(date_breaks = "1 year", date_labels = "%Y", limits = as.Date(c("2012-01-01", "2024-12-31"))) +
   scale_y_continuous(limits = c(0, 100), expand = c(0, 0), breaks = seq(0, 100, 10)) +
   theme_classic(base_size = 14) +
   theme(
@@ -1456,12 +1501,12 @@ myanmar_desc_social_support_plot <- gallup_myanmar %>%
   ) +
   labs(
     x = "Year", y = "Proportion of Respondents Agreeing",
-    title = "Social Support in Myanmar, 2014-2024\n"
+    title = "Social Support in Myanmar, 2012-2024\n"
   )
 
 myanmar_desc_social_support_plot
 
-ggsave("figures/myanmar_desc_social_support_plot.png", myanmar_desc_social_support_plot, width = 12, height = 8)
+ggsave("figures/myanmar_desc_social_support_plot.png", myanmar_desc_social_support_plot, width = 14, height = 8)
 
 
 # By region --------------------------------------------------------------------
@@ -1501,7 +1546,7 @@ ggsave("figures/myanmar_desc_social_support_plot.png", myanmar_desc_social_suppo
 #   geom_point() +
 #   geom_line() +
 #   geom_errorbar(aes(ymin = lowci, ymax = upci), width = 0.15) +
-#   scale_x_continuous(breaks = seq(2014, 2024, 1)) +
+#   scale_x_continuous(breaks = seq(2012, 2024, 1)) +
 #   scale_y_continuous(limits = c(0, 10), expand = c(0, 0), breaks = seq(0, 10, 1)) +
 #   theme_bw(base_size = 14) +
 #   theme(
@@ -1523,7 +1568,7 @@ ggsave("figures/myanmar_desc_social_support_plot.png", myanmar_desc_social_suppo
 #   facet_wrap(~REGION_MMR, nrow = 3) +
 #   labs(
 #     x = "Year", y = "Life Satisfaction and Hope",
-#     title = "Life Satisfaction and Hope by Regions in Myanmar, 2014-2024\n"
+#     title = "Life Satisfaction and Hope by Regions in Myanmar, 2012-2024\n"
 #   )
 
 # ggsave("figures/myanmar_desc_LS_hope_by_regions_plot.png", myanmar_desc_LS_hope_by_regions_plot, width = 20, height = 15)
@@ -1550,7 +1595,7 @@ unique(gallup_myanmar$DHS_regions)
 myanmar_desc_LS_hope_by_DHS_regions_plot <-
   gallup_myanmar %>%
   filter(!is.na(WP16), !is.na(WGT), !is.na(WP18)) %>%
-  group_by(YEAR_INTERVIEW, DHS_regions) %>%
+  group_by(mid_date, DHS_regions) %>%
   summarize(
     LS_mean = Hmisc::wtd.mean(WP16, WGT, na.rm = TRUE),
     LS_se = sqrt(Hmisc::wtd.var(WP16, WGT, na.rm = TRUE) / sum(WGT, na.rm = TRUE)),
@@ -1571,17 +1616,17 @@ myanmar_desc_LS_hope_by_DHS_regions_plot <-
     names_from = statistic,
     values_from = value
   ) %>%
-  select(YEAR_INTERVIEW, DHS_regions, variable, mean, lowci, upci) %>%
+  select(mid_date, DHS_regions, variable, mean, lowci, upci) %>%
   # Plotting the data
-  ggplot(aes(x = YEAR_INTERVIEW, y = mean, color = variable, group = variable)) +
-  geom_point() +
-  geom_line() +
-  geom_errorbar(aes(ymin = lowci, ymax = upci), width = 0.15) +
-  scale_x_continuous(breaks = seq(2014, 2024, 1)) +
+  ggplot(aes(x = mid_date, y = mean, color = variable, group = variable, fill = variable)) +
+  geom_point(size = 2) +
+  geom_line(size = 1) +
+  geom_ribbon(alpha = 0.2, aes(ymin = lowci, ymax = upci), size = 0) +
+  scale_x_date(date_breaks = "1 year", date_labels = "%Y", limits = as.Date(c("2012-01-01", "2024-12-31"))) +
   scale_y_continuous(limits = c(0, 10), expand = c(0, 0), breaks = seq(0, 10, 1)) +
   scale_color_manual(values = c("#e76f51", "#2a9d8f"), labels = c("Life Satisfaction", "Hope"), name = "") +
   scale_fill_manual(values = c("#e76f51", "#2a9d8f"), labels = c("Life Satisfaction", "Hope"), name = "") +
-  theme_bw(base_size = 14) +
+  theme_classic(base_size = 14) +
   theme(
     axis.ticks.x = element_line(color = "black"),
     axis.text.x = element_text(color = "black", size = 14, angle = 45, hjust = 1),
@@ -1601,7 +1646,7 @@ myanmar_desc_LS_hope_by_DHS_regions_plot <-
   facet_wrap(~DHS_regions, nrow = 2) +
   labs(
     x = "Year", y = "Life Satisfaction and Hope",
-    title = "Life Satisfaction and Hope by Demography and Health Surveys(DHS) Program Regions in Myanmar, 2014-2024\n"
+    title = "Life Satisfaction and Hope by Demography and Health Surveys(DHS) Program Regions in Myanmar, 2012-2024\n"
   )
 
 myanmar_desc_LS_hope_by_DHS_regions_plot
@@ -1655,8 +1700,8 @@ myanmar_desc_DHS_regions_map <- gadm41_MMR_shp %>%
   # Custom positioned shadow for specific labels
   geom_text(
     data = data.frame(
-      x = c(96.3, 93.25, 92.6, 95.55, 100.4, 95, 98, 97.25),
-      y = c(16.8, 16.5, 19.6, 21.05, 12.4, 20.2, 16.9, 15.7),
+      x = c(96.7, 93.25, 92.6, 95.55, 100.4, 95, 98, 97.27),
+      y = c(16.2, 16.5, 19.6, 21.05, 12.4, 20.2, 16.9, 15.4),
       label = c("Yangon", "Ayeyarwady", "Rakhine", "Mandalay", "Tanintharyi", "Magway", "Kayin", "Mon")
     ), aes(x = x + 0.02, y = y - 0.02, label = label),
     size = 2.5, color = "#F5F5F5", fontface = "bold"
@@ -1664,8 +1709,8 @@ myanmar_desc_DHS_regions_map <- gadm41_MMR_shp %>%
   # Custom positioned main text for specific labels
   geom_text(
     data = data.frame(
-      x = c(96.3, 93.25, 92.6, 95.55, 100.4, 95, 98, 97.25),
-      y = c(16.8, 16.5, 19.6, 21.05, 12.4, 20.2, 16.9, 15.7),
+      x = c(96.7, 93.25, 92.6, 95.55, 100.4, 95, 98, 97.27),
+      y = c(16.2, 16.5, 19.6, 21.05, 12.4, 20.2, 16.9, 15.4),
       label = c("Yangon", "Ayeyarwady", "Rakhine", "Mandalay", "Tanintharyi", "Magway", "Kayin", "Mon")
     ), aes(x = x, y = y, label = label),
     size = 2.5, color = "black", fontface = "bold"
@@ -1686,7 +1731,7 @@ myanmar_desc_DHS_regions_map <- gadm41_MMR_shp %>%
 
 myanmar_desc_DHS_regions_map
 
-ggsave("figures/myanmar_desc_DHS_regions_map.png", myanmar_desc_DHS_regions_map, width = 12, height = 8)
+ggsave("figures/myanmar_desc_DHS_regions_map.png", myanmar_desc_DHS_regions_map, width = 14, height = 8)
 
 
 # Descriptive statistics -----------------------------------
@@ -1698,7 +1743,9 @@ gallup_myanmar %>%
   pull(total_n) %>%
   sum()
 
-# average age of the respondents (2014-2024)
+nrow(gallup_myanmar)
+
+# average age of the respondents (2012-2024)
 summary(gallup_myanmar$WP1220)
 
 

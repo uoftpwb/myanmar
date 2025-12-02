@@ -14,3 +14,11 @@ data/GWP_myanmar_2014_2024.rds
 data/GWP_myanmar_2014_2024.rds
 *.rds
 Testing.R
+.specstory/history/2025-11-21_20-22Z-generate-wp16-distribution-plots-for-countries.md
+figures/wp16_distribution_afghanistan_2022_2024.png
+figures/wp16_distribution_finland_2022_2024.png
+figures/wp16_distribution_india_2022_2024.png
+figures/wp16_distribution_united_states_2022_2024.png
+figures/wp16_distribution_venezuela_2022_2024.png
+figures/wp16_distribution_yemen_2022_2024.png
+wp16_distribution_plots.R
