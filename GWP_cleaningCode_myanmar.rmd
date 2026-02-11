@@ -22,8 +22,8 @@ library(data.table)
 ```{r eval=FALSE}
 # This code will not be run in the current Rmd
 
-# Import the data file "The_Gallup_021126.dat"
-gallupRaw <- rio::import("~/Documents/GitHub/DATA/The_Gallup_021126.dat")
+# Import the data file "The_Gallup_011626.dat"
+gallupRaw <- rio::import("~/Documents/GitHub/DATA/The_Gallup_011626.dat")
 
 # Create a character vector of the names of the variables we're interested in
 varRequired <- c(
@@ -55,7 +55,7 @@ Once we had the subset of the Gallup data, we imported the data and loaded the n
 ```{r set-up}
 
 # Read the RDS file
-gallupSubset <- readRDS("data/(260211)GWP_RawSubset_MyanmarProject.rds")
+gallupSubset <- readRDS("(260211)GWP_RawSubset_MyanmarProject.rds")
 objects(gallupSubset)
 ```
 
