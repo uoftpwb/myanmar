@@ -1,14 +1,14 @@
 ---
 title: "GallupDataPreparation"
 author: Phyllis Lun
-date: '2025-06-18'
+date: '2026-02-11'
 ---
 
 ## 0. Subset the Gallup raw data
 
-The version of the Gallup raw data used in this study is "The_Gallup_022125.dat". 
+The version of the Gallup raw data used in this study is "The_Gallup_0211626.dat". 
 
-This data was released to the [UofT Map and Data Library](https://mdl.library.utoronto.ca/collections/numeric-data/gallup) in September 2025.
+This data was released to the [UofT Map and Data Library](https://mdl.library.utoronto.ca/collections/numeric-data/gallup) in January 2026.
 
 Since the raw data file is relatively large, we used a separate environment to run the following code, which subsets the variables that we needed.
 
@@ -22,8 +22,8 @@ library(data.table)
 ```{r eval=FALSE}
 # This code will not be run in the current Rmd
 
-# Import the data file "The_Gallup_091925.dat"
-gallupRaw <- rio::import("~/Documents/GitHub/DATA/The_Gallup_091925.dat")
+# Import the data file "The_Gallup_021126.dat"
+gallupRaw <- rio::import("~/Documents/GitHub/DATA/The_Gallup_021126.dat")
 
 # Create a character vector of the names of the variables we're interested in
 varRequired <- c(
@@ -42,7 +42,7 @@ varRequired <- c(
 gallupSubset <- gallupRaw %>% select(all_of(varRequired))
 
 # Save the gallupSubset data frame to a .rds file for later use
-saveRDS(gallupSubset, "(250918)GWP_RawSubset_MyanmarProject.rds")
+saveRDS(gallupSubset, "(260211)GWP_RawSubset_MyanmarProject.rds")
 ```
 
 
@@ -55,7 +55,7 @@ Once we had the subset of the Gallup data, we imported the data and loaded the n
 ```{r set-up}
 
 # Read the RDS file
-gallupSubset <- readRDS("data/(250918)GWP_RawSubset_MyanmarProject.rds")
+gallupSubset <- readRDS("data/(260211)GWP_RawSubset_MyanmarProject.rds")
 objects(gallupSubset)
 ```
 
@@ -187,7 +187,7 @@ The object `gallup` is now a cleaned subset of the Gallup data.
 We save the Gallup cleaned data to a .rds file for later use
 
 ```{r exporting-gallup-cleaned}
-saveRDS(gallup, "data/(250918)GWP_cleaned_MyanmarProject.rds")
+saveRDS(gallup, "data/(260211)GWP_cleaned_MyanmarProject.rds")
 ```
 
 
