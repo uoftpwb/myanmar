@@ -29,3 +29,4 @@ wp16_distribution_plots.R
 /.specstory
 .specstory/history/2025-08-08_17-56Z-what-does-this-do-exactly.md
 .specstory/history/2025-07-21_18-44Z-troubleshooting-library-loading-issues.md
+*.md
